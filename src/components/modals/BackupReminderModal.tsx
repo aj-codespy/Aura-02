@@ -57,11 +57,11 @@ export const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
                         <Ionicons name="cloud-upload-outline" size={48} color={colors.primary} />
                     </View>
 
-                    <Text style={[styles.title, { color: colors.text }]}>
+                    <Text style={[styles.title, { color: colors.text.primary }]}>
                         Time to Backup Your Data
                     </Text>
 
-                    <Text style={[styles.message, { color: colors.textSecondary }]}>
+                    <Text style={[styles.message, { color: colors.text.secondary }]}>
                         {lastBackupDate
                             ? `It's been ${daysSinceBackup} days since your last backup. `
                             : 'You haven\'t backed up your data yet. '}
@@ -85,7 +85,7 @@ export const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
                             onPress={handleRemindLater}
                             disabled={isExporting}
                         >
-                            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+                            <Text style={[styles.secondaryButtonText, { color: colors.text.primary }]}>
                                 Remind me in 7 days
                             </Text>
                         </TouchableOpacity>
@@ -95,7 +95,7 @@ export const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
                             onPress={onClose}
                             disabled={isExporting}
                         >
-                            <Text style={[styles.dismissButtonText, { color: colors.textSecondary }]}>
+                            <Text style={[styles.dismissButtonText, { color: colors.text.secondary }]}>
                                 Dismiss
                             </Text>
                         </TouchableOpacity>

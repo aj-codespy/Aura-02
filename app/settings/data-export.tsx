@@ -100,9 +100,9 @@ export default function DataExportScreen() {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.card }]}>
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Data Export</Text>
+                <Text style={[styles.headerTitle, { color: colors.text.primary }]}>Data Export</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -111,20 +111,20 @@ export default function DataExportScreen() {
                 <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.cardHeader}>
                         <Ionicons name="time-outline" size={24} color={colors.primary} />
-                        <Text style={[styles.cardTitle, { color: colors.text }]}>Last Backup</Text>
+                        <Text style={[styles.cardTitle, { color: colors.text.primary }]}>Last Backup</Text>
                     </View>
-                    <Text style={[styles.lastBackupText, { color: colors.textSecondary }]}>
+                    <Text style={[styles.lastBackupText, { color: colors.text.secondary }]}>
                         {formatDate(lastBackupDate)}
                     </Text>
                     {lastBackupDate && (
-                        <Text style={[styles.lastBackupDate, { color: colors.textSecondary }]}>
+                        <Text style={[styles.lastBackupDate, { color: colors.text.secondary }]}>
                             {lastBackupDate.toLocaleDateString()} at {lastBackupDate.toLocaleTimeString()}
                         </Text>
                     )}
                 </View>
 
                 {/* Export Section */}
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Export Data</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Export Data</Text>
 
                 <TouchableOpacity
                     style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -135,20 +135,20 @@ export default function DataExportScreen() {
                         <Ionicons name="cloud-upload-outline" size={28} color={colors.primary} />
                     </View>
                     <View style={styles.actionContent}>
-                        <Text style={[styles.actionTitle, { color: colors.text }]}>Export All Data</Text>
-                        <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>
+                        <Text style={[styles.actionTitle, { color: colors.text.primary }]}>Export All Data</Text>
+                        <Text style={[styles.actionDescription, { color: colors.text.secondary }]}>
                             Export all energy data, schedules, devices, and alerts to CSV files
                         </Text>
                     </View>
                     {isExporting ? (
                         <ActivityIndicator color={colors.primary} />
                     ) : (
-                        <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+                        <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                     )}
                 </TouchableOpacity>
 
                 {/* Import Section */}
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Import Data</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Import Data</Text>
 
                 <TouchableOpacity
                     style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -159,22 +159,22 @@ export default function DataExportScreen() {
                         <Ionicons name="cloud-download-outline" size={28} color={colors.success} />
                     </View>
                     <View style={styles.actionContent}>
-                        <Text style={[styles.actionTitle, { color: colors.text }]}>Import from CSV</Text>
-                        <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>
+                        <Text style={[styles.actionTitle, { color: colors.text.primary }]}>Import from CSV</Text>
+                        <Text style={[styles.actionDescription, { color: colors.text.secondary }]}>
                             Import previously exported data from CSV files
                         </Text>
                     </View>
                     {isImporting ? (
                         <ActivityIndicator color={colors.success} />
                     ) : (
-                        <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+                        <Ionicons name="chevron-forward" size={24} color={colors.text.secondary} />
                     )}
                 </TouchableOpacity>
 
                 {/* Info Section */}
                 <View style={[styles.infoCard, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
                     <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-                    <Text style={[styles.infoText, { color: colors.text }]}>
+                    <Text style={[styles.infoText, { color: colors.text.primary }]}>
                         Regular backups help protect your data. We recommend backing up every 30 days.
                     </Text>
                 </View>

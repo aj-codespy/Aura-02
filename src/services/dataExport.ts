@@ -207,14 +207,13 @@ export const DataExportService = {
         for (const line of lines) {
             if (!line.trim()) continue;
 
-            const [, nodeId, , voltage, current, power] =
+            const [, nodeId, , voltage, current] =
                 line.split(',').map(v => v.replace(/"/g, '').trim());
 
             await Repository.logEnergyData(
                 parseInt(nodeId),
                 parseFloat(voltage),
-                parseFloat(current),
-                parseFloat(power)
+                parseFloat(current)
             );
             count++;
         }
@@ -236,7 +235,7 @@ export const DataExportService = {
             await Repository.createSchedule(
                 parseInt(nodeId),
                 time,
-                days.split(''), // Convert string to array of day numbers
+                days, // Pass as string
                 action as 'on' | 'off'
             );
             count++;

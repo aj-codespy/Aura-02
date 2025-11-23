@@ -82,7 +82,7 @@ export const Repository = {
     },
 
     // Nodes
-    upsertNode: async (serverId: number, name: string, type: string, category: string, status: string, temp: number) => {
+    upsertNode: async (serverId: number, name: string, type: string, category: string, status: string, temp?: number) => {
         // First, try to find existing node
         const existing = await db.getFirstAsync<Node>(
             'SELECT * FROM nodes WHERE server_id = ? AND name = ?',
@@ -93,14 +93,14 @@ export const Repository = {
             // Update existing node
             await db.runAsync(
                 'UPDATE nodes SET type = ?, category = ?, status = ?, temperature = ? WHERE id = ?',
-                [type, category, status, temp, existing.id]
+                [type, category, status, temp || 0, existing.id]
             );
             return existing.id;
         } else {
             // Insert new node
             const result = await db.runAsync(
                 'INSERT INTO nodes (server_id, name, type, category, status, temperature) VALUES (?, ?, ?, ?, ?, ?)',
-                [serverId, name, type, category, status, temp]
+                [serverId, name, type, category, status, temp || 0]
             );
             return result.lastInsertRowId;
         }
@@ -126,10 +126,10 @@ export const Repository = {
     },
 
     // Schedules
-    createSchedule: async (nodeId: number, action: string, time: string, days: string[]) => {
+    createSchedule: async (nodeId: number, time: string, days: string, action: 'on' | 'off') => {
         const result = await db.runAsync(
-            'INSERT INTO schedules (node_id, action, time, days, is_active) VALUES (?, ?, ?, ?, 1)',
-            [nodeId, action, time, JSON.stringify(days)]
+            'INSERT INTO schedules (node_id, action, time, days, is_active) VALUES (?, ?, ?, ?, ?)',
+            [nodeId, action, time, days, 1]
         );
         return result.lastInsertRowId;
     },

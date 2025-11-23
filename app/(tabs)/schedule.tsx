@@ -126,7 +126,7 @@ export default function ScheduleScreen() {
                     });
                 }
             } else {
-                await Repository.createSchedule(selectedNodeId, action, time, selectedDays);
+                await Repository.createSchedule(selectedNodeId, time, selectedDays.join(''), action);
                 // Hardware create (best effort)
                 const servers = await Repository.getServers();
                 if (servers.length > 0) {
