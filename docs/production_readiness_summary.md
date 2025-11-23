@@ -3,11 +3,13 @@
 ## ✅ What's Been Done
 
 ### Security & Configuration
+
 - ✅ Updated `.gitignore` to exclude `aws-exports.js` and other sensitive files
 - ✅ Created `aws-exports.example.js` as template for developers
 - ✅ Added comprehensive `.env` support to gitignore
 
 ### Documentation
+
 - ✅ Created detailed `README.md` with:
   - Installation instructions
   - Project structure overview
@@ -17,6 +19,7 @@
 - ✅ Created `setup.sh` automated environment setup script
 
 ### Code Quality
+
 - ✅ Fixed database memory leaks (proper upsert, reduced sync frequency)
 - ✅ Implemented Dark Mode with theme persistence
 - ✅ Added proper cleanup for background sync intervals
@@ -25,9 +28,11 @@
 ## ⚠️ CRITICAL - Action Required Before GitHub Push
 
 ### 1. **Protect AWS Credentials** (HIGHEST PRIORITY)
+
 Your `src/constants/aws-exports.js` file currently contains placeholder credentials but is NOT in `.gitignore` yet in the git index.
 
 **Action Required:**
+
 ```bash
 # Remove from git tracking if already committed
 git rm --cached src/constants/aws-exports.js
@@ -40,16 +45,22 @@ git add src/constants/aws-exports.example.js
 ```
 
 ### 2. **Update Bundle Identifiers**
+
 Edit `app.json` and change:
+
 - `com.yourname.projectaura` → `com.yourcompany.projectaura`
 
 ### 3. **Remove Development Code**
+
 For production deployment, edit `src/database/index.ts`:
+
 - **Remove or comment out** lines 17-22 (DROP TABLE statements)
 - Keep the cleanup queries (lines 75-85) for old data management
 
 ### 4. **Configure Production Mode**
+
 Edit `src/services/deviceSync.ts`:
+
 - Change `USE_MOCK = true` to `USE_MOCK = false` when ready for real hardware
 - Update `knownIps` array with your actual server IPs (line 166)
 
@@ -83,6 +94,7 @@ npm start
 ## 📦 What's Ready for GitHub
 
 ### ✅ Safe to Commit
+
 - All source code in `src/`, `app/`, `components/`
 - Configuration files: `app.json`, `package.json`, `tsconfig.json`
 - Documentation: `README.md`, `setup.sh`
@@ -90,6 +102,7 @@ npm start
 - Assets in `assets/`
 
 ### ❌ DO NOT Commit
+
 - `src/constants/aws-exports.js` (credentials)
 - `node_modules/`
 - `.expo/`, `.vscode/`, `.idea/`

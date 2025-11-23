@@ -3,11 +3,11 @@
 ## ⚠️ CRITICAL - Before Pushing to GitHub
 
 ### 1. Security & Credentials
+
 - [ ] **AWS Credentials**: Ensure `src/constants/aws-exports.js` is NOT committed
   - Verify it's in `.gitignore`
   - Only commit `aws-exports.example.js`
   - Document setup steps in README
-  
 - [ ] **Environment Variables**: Check for any hardcoded secrets
   - API keys
   - Database credentials
@@ -16,6 +16,7 @@
 ### 2. Configuration Files
 
 - [ ] **app.json**: Update bundle identifiers
+
   ```json
   "ios": {
     "bundleIdentifier": "com.yourcompany.projectaura"  // Change this!
@@ -46,13 +47,12 @@
 - [ ] **Schema**: Ensure database schema is production-ready
   - Remove DROP TABLE statements for production
   - Keep cleanup queries for old data
-  
 - [ ] **Migrations**: Document any required database migrations
 
 ### 5. Performance
 
 - [ ] **Sync Frequency**: Verify background sync interval (currently 30s)
-- [ ] **Memory Management**: 
+- [ ] **Memory Management**:
   - Energy data logging reduced (every 3rd sync)
   - Duplicate alert prevention enabled
   - Database cleanup on init enabled
@@ -79,10 +79,9 @@
 
 ### 8. Build Configuration
 
-- [ ] **iOS**: 
+- [ ] **iOS**:
   - Update `ios/` folder if using bare workflow
   - Configure signing certificates
-  
 - [ ] **Android**:
   - Update `android/` folder if using bare workflow
   - Configure signing keys for release builds
@@ -115,6 +114,7 @@ git status  # Ensure no sensitive files are staged
 ### Remove Development Features
 
 1. **Database Reset** (`src/database/index.ts`):
+
    ```typescript
    // REMOVE these lines for production:
    DROP TABLE IF EXISTS alerts;
@@ -138,6 +138,7 @@ git status  # Ensure no sensitive files are staged
 ## Deployment Platforms
 
 ### Expo EAS Build
+
 ```bash
 # Install EAS CLI
 npm install -g eas-cli
@@ -153,6 +154,7 @@ eas build --platform android
 ```
 
 ### App Store Submission
+
 - [ ] Prepare app screenshots
 - [ ] Write app description
 - [ ] Set up App Store Connect / Google Play Console

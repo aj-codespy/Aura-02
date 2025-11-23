@@ -8,15 +8,15 @@
 // 3. Or use environment variables (recommended for production)
 
 const awsConfig = {
-    Auth: {
-        Cognito: {
-            // Get from AWS Console → Cognito → User Pools
-            userPoolId: process.env.EXPO_PUBLIC_AWS_USER_POOL_ID || 'us-east-1_XXXXXXXXX',
+  Auth: {
+    Cognito: {
+      // Get from AWS Console → Cognito → User Pools
+      userPoolId: process.env.EXPO_PUBLIC_AWS_USER_POOL_ID || 'us-east-1_XXXXXXXXX',
 
-            // Get from User Pool → App Integration → App clients
-            userPoolClientId: process.env.EXPO_PUBLIC_AWS_CLIENT_ID || 'XXXXXXXXXXXXXXXXXXXXXXXXXX',
-        }
-    }
+      // Get from User Pool → App Integration → App clients
+      userPoolClientId: process.env.EXPO_PUBLIC_AWS_CLIENT_ID || 'XXXXXXXXXXXXXXXXXXXXXXXXXX',
+    },
+  },
 };
 
 export default awsConfig;

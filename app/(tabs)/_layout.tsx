@@ -20,7 +20,8 @@ function TabNavigator() {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.text.secondary,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -35,7 +36,11 @@ function TabNavigator() {
         options={{
           title: 'Devices',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'hardware-chip' : 'hardware-chip-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? 'hardware-chip' : 'hardware-chip-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />

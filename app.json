@@ -17,10 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.ajcodespy.aura",
-      "permissions": [
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
-      ]
+      "permissions": ["RECEIVE_BOOT_COMPLETED", "VIBRATE"]
     },
     "notification": {
       "icon": "./assets/images/adaptive-icon.png",

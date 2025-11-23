@@ -21,25 +21,27 @@ A React Native mobile application for monitoring and controlling industrial IoT 
 ## Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <your-repo-url>
    cd ProjectAura
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Configure AWS Amplify (Optional)**
-   
+
    If using AWS Cognito for authentication:
    - Copy `src/constants/aws-exports.example.js` to `src/constants/aws-exports.js`
    - Update with your AWS Cognito credentials
    - **Important**: `aws-exports.js` is gitignored to protect credentials
 
 4. **Update app identifiers**
-   
+
    Edit `app.json` and replace:
    - `com.yourname.projectaura` with your bundle identifier
    - Update app name and slug if desired
@@ -53,6 +55,7 @@ npm start
 ```
 
 Then:
+
 - Press `i` for iOS simulator
 - Press `a` for Android emulator
 - Scan QR code with Expo Go for physical device
@@ -92,11 +95,13 @@ ProjectAura/
 The app supports both mock and real hardware modes:
 
 **Mock Mode** (Default for development):
+
 - Edit `src/services/deviceSync.ts`
 - Set `USE_MOCK = true`
 - Generates simulated device data
 
 **Real Hardware Mode**:
+
 - Set `USE_MOCK = false`
 - Configure server IPs in `DeviceSyncService.discoverDevices()`
 - Ensure Local LAN API is accessible
@@ -124,14 +129,17 @@ The app supports both mock and real hardware modes:
 ## Troubleshooting
 
 ### App stuck on loading screen
+
 - Clear app data: Settings → Apps → ProjectAura → Clear Data
 - Or run: `adb shell pm clear com.yourname.projectaura`
 
 ### Database errors
+
 - The app automatically drops and recreates tables on init during development
 - For production, remove DROP TABLE statements in `src/database/index.ts`
 
 ### Out of Memory errors
+
 - Reduce sync frequency in `src/services/deviceSync.ts`
 - Clear app data to reset database
 - Ensure you're using the latest code with memory optimizations

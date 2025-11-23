@@ -5,11 +5,13 @@
 ### 1. Code Quality Tools
 
 #### ESLint
+
 - ✅ Already configured via `eslint.config.js`
 - Uses Expo's recommended ESLint config
 - Run: `npm run lint` or `npm run lint:fix`
 
 #### Prettier
+
 - ✅ Configured via `.prettierrc`
 - Settings:
   - Single quotes
@@ -19,6 +21,7 @@
 - Run: `npm run format` or `npm run format:check`
 
 #### TypeScript
+
 - ✅ Configured via `tsconfig.json`
 - Strict mode enabled
 - Run type checking: `npm run type-check`
@@ -26,7 +29,9 @@
 ### 2. Git Hooks (Husky)
 
 #### Pre-commit Hook
+
 Automatically runs before each commit:
+
 - ESLint check
 - TypeScript type check
 - Prettier format check
@@ -38,15 +43,18 @@ Location: `.husky/pre-commit`
 #### Workflow: `.github/workflows/ci.yml`
 
 **On Pull Request & Push:**
+
 - ✅ Lint check
 - ✅ TypeScript check
 - ✅ Prettier check
 
 **On Push to Main:**
+
 - ✅ Build Android APK
 - ✅ Build iOS IPA
 
 **Required Secrets:**
+
 - `EXPO_TOKEN` - Get from https://expo.dev/accounts/[account]/settings/access-tokens
 
 ### 4. Build Configuration (EAS)
@@ -54,6 +62,7 @@ Location: `.husky/pre-commit`
 #### File: `eas.json`
 
 **Profiles:**
+
 - `development` - For development builds
 - `preview` - For internal testing (APK for Android)
 - `production` - For app store releases
@@ -61,13 +70,16 @@ Location: `.husky/pre-commit`
 ### 5. Editor Configuration
 
 #### EditorConfig (`.editorconfig`)
+
 - Consistent coding styles across editors
 - UTF-8 encoding
 - LF line endings
 - 2-space indentation
 
 #### VSCode Extensions (`.vscode/extensions.json`)
+
 Recommended extensions:
+
 - Prettier
 - ESLint
 - Expo Tools
@@ -83,6 +95,7 @@ npm install
 ```
 
 This will install:
+
 - `prettier` - Code formatter
 - `husky` - Git hooks manager
 
@@ -118,14 +131,14 @@ npm run format
 
 ## 🚀 Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run lint` | Check for linting errors |
-| `npm run lint:fix` | Auto-fix linting errors |
-| `npm run format` | Format all files with Prettier |
-| `npm run format:check` | Check if files are formatted |
-| `npm run type-check` | Run TypeScript compiler check |
-| `npm run prepare` | Set up Husky git hooks |
+| Script                 | Description                    |
+| ---------------------- | ------------------------------ |
+| `npm run lint`         | Check for linting errors       |
+| `npm run lint:fix`     | Auto-fix linting errors        |
+| `npm run format`       | Format all files with Prettier |
+| `npm run format:check` | Check if files are formatted   |
+| `npm run type-check`   | Run TypeScript compiler check  |
+| `npm run prepare`      | Set up Husky git hooks         |
 
 ## 🔧 GitHub Actions Setup
 
@@ -210,12 +223,14 @@ chmod +x .husky/pre-commit
 ### Prettier conflicts with ESLint
 
 The current configuration is compatible. If issues arise:
+
 - Prettier handles formatting
 - ESLint handles code quality
 
 ### CI/CD failing
 
 Check:
+
 1. `EXPO_TOKEN` secret is set in GitHub
 2. All dependencies are in `package.json`
 3. No syntax errors in workflow file

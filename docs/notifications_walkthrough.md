@@ -7,7 +7,9 @@ Implemented local push notifications for critical device alerts in the Aura IoT 
 ## ✅ What Was Implemented
 
 ### 1. **NotificationService** (`src/services/notifications.ts`)
+
 Complete notification management service with:
+
 - Permission request handling
 - Local notification scheduling
 - Notification tap handling
@@ -15,16 +17,19 @@ Complete notification management service with:
 - iOS badge management
 
 ### 2. **App Integration**
+
 - Permission request on app launch (`app/_layout.tsx`)
 - Notification listener for tap handling
 - Navigation to Alerts screen when notification tapped
 
 ### 3. **Alert Integration**
+
 - Automatic notifications for critical temperature alerts (>80°C)
 - Integrated into `DeviceSyncService.syncAll()`
 - Prevents duplicate notifications for same issue
 
 ### 4. **Configuration**
+
 - Updated `app.json` with notification settings
 - Added Android permissions (VIBRATE, RECEIVE_BOOT_COMPLETED)
 - Configured notification icon and color
@@ -42,12 +47,14 @@ Complete notification management service with:
 ## 🔧 How It Works
 
 ### Permission Flow
+
 1. App launches → `NotificationService.requestPermissions()` called
 2. User sees permission dialog
 3. Permission status stored in AsyncStorage
 4. If denied, notifications gracefully disabled
 
 ### Notification Trigger
+
 1. Background sync runs every 30 seconds
 2. Detects device temperature > 80°C
 3. Creates alert in database
@@ -55,6 +62,7 @@ Complete notification management service with:
 5. Notification appears in system tray
 
 ### Notification Tap
+
 1. User taps notification
 2. Listener in `app/_layout.tsx` catches event
 3. Navigates to `/(tabs)/alerts` screen
@@ -63,6 +71,7 @@ Complete notification management service with:
 ## 🧪 Testing Guide
 
 ### Test 1: Permission Request
+
 ```bash
 # 1. Clear app data
 adb shell pm clear com.yourname.projectaura
@@ -76,6 +85,7 @@ npm start
 ```
 
 ### Test 2: Critical Alert Notification
+
 ```bash
 # 1. Ensure app is running
 # 2. Wait for background sync (every 30s)
@@ -86,6 +96,7 @@ npm start
 ```
 
 ### Test 3: Notification Tap
+
 ```bash
 # 1. Receive notification (see Test 2)
 # 2. Tap notification
@@ -94,6 +105,7 @@ npm start
 ```
 
 ### Test 4: Background Notifications
+
 ```bash
 # 1. Launch app, grant permissions
 # 2. Press home button (app to background)
@@ -102,6 +114,7 @@ npm start
 ```
 
 ### Test 5: Permission Denied
+
 ```bash
 # 1. Clear app data
 # 2. Launch app
@@ -114,6 +127,7 @@ npm start
 ## 📱 Platform-Specific Features
 
 ### Android
+
 - ✅ Notification channel: "Critical Alerts"
 - ✅ Importance: MAX (heads-up notification)
 - ✅ Vibration pattern: [0, 250, 250, 250]
@@ -121,6 +135,7 @@ npm start
 - ✅ Sound: Default
 
 ### iOS
+
 - ✅ Badge count support
 - ✅ Sound alerts
 - ✅ Banner notifications
@@ -129,17 +144,21 @@ npm start
 ## ⚠️ Important Notes
 
 ### Local vs Remote Notifications
+
 **Current Implementation: LOCAL NOTIFICATIONS**
+
 - ✅ Works when app is in foreground
 - ✅ Works when app is in background
 - ❌ Does NOT work when app is completely closed
 
 **For Remote Push (Future Enhancement):**
+
 - Requires backend server
 - Use Firebase Cloud Messaging (FCM)
 - Needs push notification certificates (iOS)
 
 ### Notification Throttling
+
 - Duplicate alerts for same device are prevented
 - Only one notification per unique issue
 - Cleared when alert is marked as read
@@ -147,7 +166,9 @@ npm start
 ## 🐛 Troubleshooting
 
 ### Notifications Not Appearing
+
 1. **Check permissions:**
+
    ```typescript
    const hasPermission = await NotificationService.hasPermission();
    console.log('Has permission:', hasPermission);
@@ -162,11 +183,13 @@ npm start
    - Check for permission errors
 
 ### Permission Dialog Not Showing
+
 - Clear app data and reinstall
 - Check `AsyncStorage` for stored permission
 - Ensure running on physical device
 
 ### Notifications Not Navigating
+
 - Check notification listener is set up in `app/_layout.tsx`
 - Verify router is imported and used correctly
 - Check notification data includes `alertId` or `type: 'alert'`
@@ -174,15 +197,18 @@ npm start
 ## 📊 Code Changes Summary
 
 ### Files Modified
+
 - `app/_layout.tsx` - Added permission request and listener
 - `src/services/deviceSync.ts` - Added notification trigger
 - `app.json` - Added notification configuration
 - `package.json` - Added dependencies
 
 ### Files Created
+
 - `src/services/notifications.ts` - Complete notification service
 
 ### Lines Changed
+
 - 9 files changed
 - 359 insertions
 - 65 deletions
@@ -190,6 +216,7 @@ npm start
 ## 🚀 Next Steps
 
 ### Enhancements
+
 1. **Remote Push Notifications**
    - Set up Firebase Cloud Messaging
    - Backend server for push delivery

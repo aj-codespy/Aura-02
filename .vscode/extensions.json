@@ -1,9 +1,9 @@
 {
-    "recommendations": [
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "expo.vscode-expo-tools",
-        "editorconfig.editorconfig",
-        "ms-vscode.vscode-typescript-next"
-    ]
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "expo.vscode-expo-tools",
+    "editorconfig.editorconfig",
+    "ms-vscode.vscode-typescript-next"
+  ]
 }

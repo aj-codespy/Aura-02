@@ -34,7 +34,7 @@ export default function RootLayout() {
     }
 
     // Setup notification listener
-    const subscription = NotificationService.setupNotificationListener((notification) => {
+    const subscription = NotificationService.setupNotificationListener(notification => {
       // Navigate to alerts screen when notification is tapped
       const data = notification.request.content.data;
       if (data.alertId || data.type === 'alert') {
@@ -53,7 +53,7 @@ export default function RootLayout() {
     try {
       setInitError(null);
       await initDatabase();
-      console.log("✅ Success: Database & Tables are ready.");
+      console.log('✅ Success: Database & Tables are ready.');
 
       // Request notification permissions
       await NotificationService.requestPermissions();
@@ -66,8 +66,8 @@ export default function RootLayout() {
         DeviceSyncService.startBackgroundSync();
       }, 2000);
     } catch (e) {
-      console.error("❌ Error: Database failed to load.", e);
-      setInitError("Failed to initialize database. Please restart the app.");
+      console.error('❌ Error: Database failed to load.', e);
+      setInitError('Failed to initialize database. Please restart the app.');
       setupRunning.current = false; // Allow retry
     }
   };
@@ -87,7 +87,9 @@ export default function RootLayout() {
     return (
       <View style={styles.container}>
         <Text style={[styles.text, { color: 'red', marginBottom: 20 }]}>{initError}</Text>
-        <Text style={styles.text} onPress={setup}>Tap to Retry</Text>
+        <Text style={styles.text} onPress={setup}>
+          Tap to Retry
+        </Text>
       </View>
     );
   }

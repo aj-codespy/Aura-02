@@ -3,11 +3,13 @@
 ## 📱 Complete Navigation Map
 
 ### Tab Navigation (Bottom Bar)
+
 ```
 Home (/) ←→ Devices ←→ Schedule ←→ Analytics
 ```
 
 ### Full Navigation Tree
+
 ```
 App Root
 ├── (tabs)/
@@ -36,9 +38,11 @@ App Root
 ## 🧪 Navigation Test Scenarios
 
 ### Test 1: Home Screen Navigation
+
 **Path:** Home → Settings → Appearance → Back → Back → Home
 
 **Steps:**
+
 1. Launch app → Home screen
 2. Tap Settings icon (top right)
 3. ✅ Navigate to Settings screen
@@ -54,9 +58,11 @@ App Root
 ---
 
 ### Test 2: Devices Flow
+
 **Path:** Home → Devices Tab → Category → Back → Devices
 
 **Steps:**
+
 1. From Home, tap Devices tab
 2. ✅ Navigate to Devices screen (categories list)
 3. Tap any category (e.g., "Assembly Line 1")
@@ -71,9 +77,11 @@ App Root
 ---
 
 ### Test 3: Add Device Flow
+
 **Path:** Devices → Add Device → Back → Devices
 
 **Steps:**
+
 1. Navigate to Devices tab
 2. Tap "+" button (Add Device)
 3. ✅ Navigate to Add Device screen (QR scanner)
@@ -85,9 +93,11 @@ App Root
 ---
 
 ### Test 4: Settings Deep Navigation
+
 **Path:** Home → Settings → Help → Back → Settings → Appearance → Back → Settings → Back → Home
 
 **Steps:**
+
 1. Home → Tap Settings icon
 2. ✅ Settings screen
 3. Tap "Help & Support"
@@ -106,9 +116,11 @@ App Root
 ---
 
 ### Test 5: Schedule Flow
+
 **Path:** Schedule Tab → Add Schedule → Cancel → Schedule
 
 **Steps:**
+
 1. Tap Schedule tab
 2. ✅ Schedule screen
 3. Tap "Add New Schedule"
@@ -121,9 +133,11 @@ App Root
 ---
 
 ### Test 6: Alerts Navigation
+
 **Path:** Home → Alerts Button → Alerts Screen → Back → Home
 
 **Steps:**
+
 1. From Home screen
 2. Tap Alerts icon (top left)
 3. ✅ Navigate to Alerts screen
@@ -135,9 +149,11 @@ App Root
 ---
 
 ### Test 7: Notification Tap Navigation
+
 **Path:** Any Screen → Notification Tap → Alerts Screen
 
 **Steps:**
+
 1. Be on any screen (Home, Devices, etc.)
 2. Receive notification
 3. Tap notification
@@ -150,9 +166,11 @@ App Root
 ---
 
 ### Test 8: Tab Switching
+
 **Path:** Home → Devices → Schedule → Analytics → Home
 
 **Steps:**
+
 1. Start on Home tab
 2. Tap Devices tab
 3. ✅ Switch to Devices
@@ -168,9 +186,11 @@ App Root
 ---
 
 ### Test 9: Deep Link + Back
+
 **Path:** Devices → Category → Device List → Home Tab → Back Button
 
 **Steps:**
+
 1. Navigate to Devices tab
 2. Tap category
 3. ✅ Device list appears
@@ -184,9 +204,11 @@ App Root
 ---
 
 ### Test 10: Settings from Different Tabs
+
 **Path:** Devices Tab → Settings → Back → Devices Tab
 
 **Steps:**
+
 1. Navigate to Devices tab
 2. Tap Settings icon
 3. ✅ Settings screen
@@ -226,12 +248,14 @@ App Root
 ## ✅ Navigation Verification Checklist
 
 ### Header Configuration
+
 - [ ] All screens have back button (except tabs)
 - [ ] Settings icon visible on Home
 - [ ] Alerts icon visible on Home
 - [ ] Add Device button visible on Devices
 
 ### Back Navigation
+
 - [ ] Settings → Appearance → Back works
 - [ ] Settings → Help → Back works
 - [ ] Devices → Category → Back works
@@ -239,17 +263,20 @@ App Root
 - [ ] Alerts → Back works
 
 ### Tab Navigation
+
 - [ ] All 4 tabs accessible
 - [ ] Tab switching preserves state
 - [ ] Tab icons correct
 - [ ] Active tab highlighted
 
 ### Modal Navigation
+
 - [ ] Schedule modal opens
 - [ ] Schedule modal closes
 - [ ] Modal doesn't break navigation
 
 ### Deep Links
+
 - [ ] Notification tap navigates correctly
 - [ ] Back button works after notification
 
@@ -258,16 +285,19 @@ App Root
 ## 🐛 Known Navigation Issues
 
 ### Issue 1: Settings Back Button
+
 **Status:** ✅ Fixed
 **Location:** `app/settings/index.tsx`
 **Solution:** Uses `router.back()` correctly
 
 ### Issue 2: Device Category Navigation
+
 **Status:** ✅ Fixed
 **Location:** `app/devices/[id].tsx`
 **Solution:** Dynamic route with proper back navigation
 
 ### Issue 3: Tab Bar Overlap
+
 **Status:** ✅ Fixed
 **Location:** `app/(tabs)/_layout.tsx`
 **Solution:** Increased tab bar height and padding
@@ -279,11 +309,13 @@ App Root
 ### Correct Navigation Patterns
 
 ✅ **Good - Using router.push():**
+
 ```typescript
 router.push('/settings/appearance');
 ```
 
 ✅ **Good - Using router.back():**
+
 ```typescript
 <TouchableOpacity onPress={() => router.back()}>
   <Ionicons name="arrow-back" />
@@ -291,11 +323,13 @@ router.push('/settings/appearance');
 ```
 
 ✅ **Good - Tab navigation:**
+
 ```typescript
 <Tabs.Screen name="index" options={{ title: 'Home' }} />
 ```
 
 ❌ **Bad - Direct navigation without router:**
+
 ```typescript
 navigation.navigate('Screen'); // Don't use
 ```
@@ -305,6 +339,7 @@ navigation.navigate('Screen'); // Don't use
 ## 🚀 Testing Commands
 
 ### Manual Testing
+
 ```bash
 # 1. Start app
 npm start
@@ -320,6 +355,7 @@ npm start
 ```
 
 ### Automated Testing (Future)
+
 ```bash
 # Using Detox or Maestro
 detox test --configuration ios.sim.debug
