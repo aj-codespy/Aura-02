@@ -27,7 +27,8 @@ export const DataExportService = {
     exportAllData: async (): Promise<ExportResult> => {
         try {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const exportDir = `${FileSystem.documentDirectory}exports/`;
+            // Use temp directory - FileSystem constants not available in current version
+            const exportDir = '/tmp/aura-exports/';
 
             // Create export directory
             await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
@@ -206,7 +207,7 @@ export const DataExportService = {
         for (const line of lines) {
             if (!line.trim()) continue;
 
-            const [timestamp, nodeId, nodeName, voltage, current, power] =
+            const [, nodeId, , voltage, current, power] =
                 line.split(',').map(v => v.replace(/"/g, '').trim());
 
             await Repository.logEnergyData(
@@ -229,7 +230,7 @@ export const DataExportService = {
         for (const line of lines) {
             if (!line.trim()) continue;
 
-            const [, nodeId, , time, days, action, isActive] =
+            const [, nodeId, , time, days, action] =
                 line.split(',').map(v => v.replace(/"/g, '').trim());
 
             await Repository.createSchedule(

@@ -143,7 +143,7 @@ export const Repository = {
     },
 
     // Export methods - Get all data with joins
-    getAllEnergyData: async (): Promise<Array<EnergyData & { node_name: string }>> => {
+    getAllEnergyData: async (): Promise<(EnergyData & { node_name: string })[]> => {
         const result = await db.getAllAsync<EnergyData & { node_name: string }>(
             `SELECT e.*, n.name as node_name 
              FROM energy_data e 
@@ -153,7 +153,7 @@ export const Repository = {
         return result;
     },
 
-    getAllSchedules: async (): Promise<Array<Schedule & { node_name: string }>> => {
+    getAllSchedules: async (): Promise<(Schedule & { node_name: string })[]> => {
         const result = await db.getAllAsync<Schedule & { node_name: string }>(
             `SELECT s.*, n.name as node_name 
              FROM schedules s 
@@ -163,7 +163,7 @@ export const Repository = {
         return result;
     },
 
-    getAllAlerts: async (): Promise<Array<Alert & { node_name: string }>> => {
+    getAllAlerts: async (): Promise<(Alert & { node_name: string })[]> => {
         const result = await db.getAllAsync<Alert & { node_name: string }>(
             `SELECT a.*, n.name as node_name 
              FROM alerts a 
