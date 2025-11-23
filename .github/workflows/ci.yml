@@ -59,7 +59,7 @@ jobs:
         run: npm ci
 
       - name: Build Android APK
-        run: npx eas-cli build --platform android --profile preview --non-interactive
+        run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
@@ -89,6 +89,6 @@ jobs:
         run: npm ci
 
       - name: Build iOS IPA
-        run: npx eas-cli build --platform ios --profile preview --non-interactive
+        run: eas build --platform ios --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
