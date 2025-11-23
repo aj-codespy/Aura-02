@@ -1,7 +1,15 @@
+```typescript
 import { Amplify } from 'aws-amplify';
 import { fetchAuthSession, getCurrentUser, signIn, signOut } from 'aws-amplify/auth';
-import awsConfig from '../constants/aws-exports';
+// Use example file as fallback for CI/CD (aws-exports.js is gitignored)
+let awsConfig;
+try {
+    awsConfig = require('../constants/aws-exports').default;
+} catch {
+    awsConfig = require('../constants/aws-exports.example').default;
+}
 
+const USER_KEY = 'current_user';
 // Configure Amplify
 // @ts-ignore
 Amplify.configure(awsConfig);
@@ -12,7 +20,7 @@ const USE_MOCK_AUTH = true;
 export const AuthService = {
     signIn: async (username: string, password: string) => {
         if (USE_MOCK_AUTH) {
-            console.log(`[MockAuth] Signing in ${username}...`);
+            console.log(`[MockAuth] Signing in ${ username }...`);
             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network
 
             if (username && password) {

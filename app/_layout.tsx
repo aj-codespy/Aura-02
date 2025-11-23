@@ -3,11 +3,17 @@ import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import 'react-native-get-random-values';
-import awsConfig from '../src/constants/aws-exports';
 import { initDatabase } from '../src/database';
 import { DeviceSyncService } from '../src/services/deviceSync';
 import { initSentry } from '../src/services/errorTracking';
 import { NotificationService } from '../src/services/notifications';
+// Use example file as fallback for CI/CD (aws-exports.js is gitignored)
+let awsConfig;
+try {
+  awsConfig = require('../src/constants/aws-exports').default;
+} catch {
+  awsConfig = require('../src/constants/aws-exports.example').default;
+}
 
 // @ts-ignore
 Amplify.configure(awsConfig);
