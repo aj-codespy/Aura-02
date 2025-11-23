@@ -1,24 +1,94 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Amplify } from 'aws-amplify';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import 'react-native-get-random-values';
+import awsConfig from '../src/constants/aws-exports';
+import { initDatabase } from '../src/database';
+import { DeviceSyncService } from '../src/services/deviceSync';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// @ts-ignore
+Amplify.configure(awsConfig);
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [isDbReady, setDbReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const setupRunning = useRef(false);
 
+  useEffect(() => {
+    if (!setupRunning.current) {
+      setupRunning.current = true;
+      setup();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      DeviceSyncService.stopBackgroundSync();
+    };
+  }, []);
+
+  const setup = async () => {
+    try {
+      setInitError(null);
+      await initDatabase();
+      console.log("✅ Success: Database & Tables are ready.");
+
+      setDbReady(true);
+
+      // Start Background Sync AFTER DB is ready
+      // Wait 2 seconds to ensure everything is settled
+      setTimeout(() => {
+        DeviceSyncService.startBackgroundSync();
+      }, 2000);
+    } catch (e) {
+      console.error("❌ Error: Database failed to load.", e);
+      setInitError("Failed to initialize database. Please restart the app.");
+      setupRunning.current = false; // Allow retry
+    }
+  };
+
+  // 2. Show a Loading Screen while DB is setting up
+  if (!isDbReady && !initError) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.text}>Initializing Aura Brain...</Text>
+      </View>
+    );
+  }
+
+  // Show Error Screen if Init Failed
+  if (initError) {
+    return (
+      <View style={styles.container}>
+        <Text style={[styles.text, { color: 'red', marginBottom: 20 }]}>{initError}</Text>
+        <Text style={styles.text} onPress={setup}>Tap to Retry</Text>
+      </View>
+    );
+  }
+
+  // 3. Once Ready, Render the App Navigation
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/index" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
+      <Stack.Screen name="settings/help" options={{ headerShown: false }} />
+    </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  text: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#333',
+  },
+});

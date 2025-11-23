@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run linter
+npm run lint
+
+# Run TypeScript check
+npx tsc --noEmit
+
+# Run Prettier check
+npx prettier --check "**/*.{js,jsx,ts,tsx,json,md}"

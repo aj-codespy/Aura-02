@@ -32,6 +32,19 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# AWS Credentials - IMPORTANT: Never commit this file
+src/constants/aws-exports.js
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Database files (optional - uncomment if you don't want to track local DB)
+# *.db
+# *.db-shm
+# *.db-wal
 
 # typescript
 *.tsbuildinfo

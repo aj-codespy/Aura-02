@@ -1,50 +1,153 @@
-# Welcome to your Expo app 👋
+# ProjectAura - Smart Factory Energy Management System
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native mobile application for monitoring and controlling industrial IoT devices, built with Expo and TypeScript.
 
-## Get started
+## Features
 
-1. Install dependencies
+- 🏭 **Real-time Device Monitoring** - Track status, temperature, and energy consumption
+- 📊 **Analytics Dashboard** - Visualize energy usage with charts and heatmaps
+- ⏰ **Schedule Management** - Automate device control with time-based schedules
+- 🔔 **Smart Alerts** - Get notified of critical device conditions
+- 🌓 **Dark Mode** - Full theme support for day and night usage
+- 🔄 **Background Sync** - Automatic data synchronization every 30 seconds
 
+## Prerequisites
+
+- Node.js 18+ and npm
+- Expo CLI (`npm install -g expo-cli`)
+- iOS Simulator (Mac only) or Android Emulator
+- Expo Go app (for testing on physical devices)
+
+## Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd ProjectAura
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Configure AWS Amplify (Optional)**
+   
+   If using AWS Cognito for authentication:
+   - Copy `src/constants/aws-exports.example.js` to `src/constants/aws-exports.js`
+   - Update with your AWS Cognito credentials
+   - **Important**: `aws-exports.js` is gitignored to protect credentials
 
-   ```bash
-   npx expo start
-   ```
+4. **Update app identifiers**
+   
+   Edit `app.json` and replace:
+   - `com.yourname.projectaura` with your bundle identifier
+   - Update app name and slug if desired
 
-In the output, you'll find options to open the app in a
+## Running the App
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Development Mode
 
 ```bash
-npm run reset-project
+npm start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then:
+- Press `i` for iOS simulator
+- Press `a` for Android emulator
+- Scan QR code with Expo Go for physical device
 
-## Learn more
+### Build for Production
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+# iOS
+npm run ios
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Android
+npm run android
+```
 
-## Join the community
+## Project Structure
 
-Join our community of developers creating universal apps.
+```
+ProjectAura/
+├── app/                    # Expo Router screens
+│   ├── (tabs)/            # Main tab navigation
+│   ├── (auth)/            # Authentication screens
+│   ├── devices/           # Device management screens
+│   └── settings/          # Settings screens
+├── src/
+│   ├── components/        # Reusable UI components
+│   ├── database/          # SQLite database layer
+│   ├── services/          # Business logic (sync, hardware API)
+│   ├── theme/             # Design tokens and theming
+│   └── utils/             # Helper functions
+└── assets/                # Images and static files
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Configuration
+
+### Hardware API
+
+The app supports both mock and real hardware modes:
+
+**Mock Mode** (Default for development):
+- Edit `src/services/deviceSync.ts`
+- Set `USE_MOCK = true`
+- Generates simulated device data
+
+**Real Hardware Mode**:
+- Set `USE_MOCK = false`
+- Configure server IPs in `DeviceSyncService.discoverDevices()`
+- Ensure Local LAN API is accessible
+
+### Database
+
+- Uses SQLite for local data storage
+- Automatically initializes on first launch
+- Cleans up old data to prevent memory issues
+- Tables: users, servers, nodes, schedules, energy_data, alerts
+
+### Theme
+
+- Light and Dark modes supported
+- Theme preference persisted in AsyncStorage
+- Toggle in Settings → Appearance
+
+## Known Issues & Limitations
+
+1. **Memory Management**: On Android devices with limited RAM, clear app data if experiencing OOM errors
+2. **Mock Data**: Currently uses simulated data - connect to real hardware API for production
+3. **Authentication**: AWS Cognito integration is placeholder - configure with real credentials
+4. **API ID Mapping**: Node API IDs not yet stored in database (see TODO in `deviceSync.ts`)
+
+## Troubleshooting
+
+### App stuck on loading screen
+- Clear app data: Settings → Apps → ProjectAura → Clear Data
+- Or run: `adb shell pm clear com.yourname.projectaura`
+
+### Database errors
+- The app automatically drops and recreates tables on init during development
+- For production, remove DROP TABLE statements in `src/database/index.ts`
+
+### Out of Memory errors
+- Reduce sync frequency in `src/services/deviceSync.ts`
+- Clear app data to reset database
+- Ensure you're using the latest code with memory optimizations
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+[Your License Here]
+
+## Support
+
+For issues and questions, please open an issue on GitHub.

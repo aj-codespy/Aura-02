@@ -1,98 +1,255 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { useTheme } from '../../src/context/ThemeContext';
+import { Alert, Repository } from '../../src/database/repository';
+import { DeviceSyncService } from '../../src/services/deviceSync';
+import { Layout, Typography } from '../../src/theme';
+import { HapticsService } from '../../src/utils/haptics';
+
+import { ScheduleWidget } from '../../src/components/home/Schedule';
+import { StatCard } from '../../src/components/ui/StatCard';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    const { colors } = useTheme();
+    const [stats, setStats] = useState({
+        online: 0,
+        total: 0,
+        alerts: 0,
+    });
+    const [recentAlerts, setRecentAlerts] = useState<Alert[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
+    const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+    const loadData = async () => {
+        const nodes = await Repository.getAllNodes();
+        const alerts = await Repository.getUnreadAlerts();
+
+        setStats({
+            online: nodes.filter(n => n.status === 'on').length,
+            total: nodes.length,
+            alerts: alerts.length,
+        });
+        setRecentAlerts(alerts.slice(0, 3));
+    };
+
+    useEffect(() => {
+        loadData();
+        const interval = setInterval(loadData, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const onRefresh = async () => {
+        HapticsService.medium();
+        setRefreshing(true);
+        await DeviceSyncService.syncAll();
+        await loadData();
+        setRefreshing(false);
+    };
+
+    return (
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+                }
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => router.push('/(tabs)/alerts')}>
+                        <View style={styles.iconButtonContent}>
+                            <Ionicons name="notifications-outline" size={24} color={colors.text.primary} />
+                            {stats.alerts > 0 && <View style={[styles.badge, { backgroundColor: colors.error }]} />}
+                        </View>
+                    </TouchableOpacity>
+
+                    <View style={styles.headerCenter}>
+                        <Text style={[styles.greeting, { color: colors.primary }]}>Hi, Ayush</Text>
+                        <Text style={[styles.subGreeting, { color: colors.text.secondary }]}>Welcome back</Text>
+                    </View>
+
+                    <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => router.push('/settings')}>
+                        <Ionicons name="settings-outline" size={24} color={colors.text.primary} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Overview Section */}
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Factory Overview</Text>
+                    <View style={styles.liveBadge}>
+                        <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
+                        <Text style={[styles.liveText, { color: colors.success }]}>LIVE</Text>
+                    </View>
+                </View>
+
+                {/* Stats Grid */}
+                <View style={styles.statsGrid}>
+                    <StatCard
+                        title="Devices Online"
+                        value={stats.online}
+                        subtext={`of ${stats.total} total`}
+                        icon="shield-checkmark-outline"
+                        iconColor={colors.success}
+                        borderColor={colors.success}
+                        style={{ width: '100%' }} // Full width for first card
+                    />
+
+                    <View style={styles.row}>
+                        <StatCard
+                            title="kWh Today"
+                            value="1,842"
+                            trend="+ 12% vs yesterday"
+                            trendPositive={true}
+                            icon="flash-outline"
+                            iconColor={colors.accent}
+                            borderColor={colors.accent}
+                        />
+                        <StatCard
+                            title="Active Alerts"
+                            value={stats.alerts}
+                            subtext="Needs attention"
+                            icon="warning-outline"
+                            iconColor={colors.error}
+                            borderColor={colors.error}
+                        />
+                    </View>
+                </View>
+
+                {/* Recent Alerts */}
+                {recentAlerts.length > 0 && (
+                    <View style={styles.alertsSection}>
+                        <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Recent Alerts</Text>
+                        {recentAlerts.map(alert => (
+                            <View key={alert.id} style={[styles.alertItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                <View style={[styles.alertIcon, { backgroundColor: alert.severity === 'critical' ? colors.error + '20' : colors.warning + '20' }]}>
+                                    <Ionicons
+                                        name={alert.severity === 'critical' ? 'warning' : 'alert-circle'}
+                                        size={20}
+                                        color={alert.severity === 'critical' ? colors.error : colors.warning}
+                                    />
+                                </View>
+                                <View style={styles.alertContent}>
+                                    <Text style={[styles.alertMessage, { color: colors.text.primary }]} numberOfLines={1}>{alert.message}</Text>
+                                    <Text style={[styles.alertTime, { color: colors.text.secondary }]}>Just now</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={16} color={colors.text.secondary} />
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* Schedule Widget */}
+                <ScheduleWidget />
+
+            </ScrollView>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+    container: {
+        flex: 1,
+    },
+    scrollContent: {
+        padding: Layout.padding,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    greeting: {
+        fontSize: 28,
+        fontWeight: '800',
+    },
+    subGreeting: {
+        fontSize: 16,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        ...Typography.subHeader,
+    },
+    liveBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    liveDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    liveText: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    statsGrid: {
+        gap: 12,
+    },
+    row: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    iconButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+    },
+    iconButtonContent: {
+        position: 'relative',
+    },
+    badge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    headerCenter: {
+        alignItems: 'center',
+    },
+    alertsSection: {
+        marginTop: 24,
+        gap: 12,
+    },
+    alertItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 12,
+    },
+    alertIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    alertContent: {
+        flex: 1,
+    },
+    alertMessage: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    alertTime: {
+        fontSize: 12,
+    },
 });
