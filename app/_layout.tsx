@@ -6,10 +6,14 @@ import 'react-native-get-random-values';
 import awsConfig from '../src/constants/aws-exports';
 import { initDatabase } from '../src/database';
 import { DeviceSyncService } from '../src/services/deviceSync';
+import { initSentry } from '../src/services/errorTracking';
 import { NotificationService } from '../src/services/notifications';
 
 // @ts-ignore
 Amplify.configure(awsConfig);
+
+// Initialize error tracking
+initSentry();
 
 export default function RootLayout() {
   const [isDbReady, setDbReady] = useState(false);

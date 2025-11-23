@@ -9,14 +9,14 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourname.projectaura"
+      "bundleIdentifier": "com.ajcodespy.aura"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourname.projectaura",
+      "package": "com.ajcodespy.aura",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE"

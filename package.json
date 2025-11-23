@@ -22,6 +22,7 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "@sentry/react-native": "^7.6.0",
     "aws-amplify": "^6.15.8",
     "expo": "~54.0.24",
     "expo-build-properties": "~1.0.9",

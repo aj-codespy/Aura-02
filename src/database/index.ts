@@ -14,7 +14,13 @@ export const initDatabase = async () => {
   try {
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
-      
+    `);
+
+    // Initialize database schema
+    // PRODUCTION: DROP TABLE statements commented out to preserve user data
+    // For development, uncomment these lines to reset database
+    /*
+    await db.execAsync(`
       -- Drop all tables to clear memory
       DROP TABLE IF EXISTS alerts;
       DROP TABLE IF EXISTS energy_data;
@@ -22,7 +28,10 @@ export const initDatabase = async () => {
       DROP TABLE IF EXISTS nodes;
       DROP TABLE IF EXISTS servers;
       DROP TABLE IF EXISTS users;
+    `);
+    */
 
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY NOT NULL,
         cognito_id TEXT UNIQUE,

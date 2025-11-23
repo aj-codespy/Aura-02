@@ -1,8 +1,10 @@
 import { Repository } from '../database/repository';
 import { HardwareService } from './hardware';
+import { NotificationService } from './notifications';
 
 // Flag to switch between Mock and Real Hardware
-const USE_MOCK = true; // Set to false to use real hardware
+// For production, set EXPO_PUBLIC_USE_MOCK_HARDWARE=false in .env
+const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_HARDWARE === 'true' || false;
 
 // Mock Hardware API (Kept for fallback/testing)
 export const MockHardware = {
@@ -111,7 +113,7 @@ export const DeviceSyncService = {
                             );
 
                             if (!hasRecentAlert) {
-                                const alertMessage = `${node.name} is overheating (${node.temperature}°C)`;
+                                const alertMessage = `${node.name} is overheating(${node.temperature}°C)`;
                                 await Repository.createAlert(
                                     nodeId,
                                     'critical',
@@ -136,7 +138,7 @@ export const DeviceSyncService = {
                     }
                 }
             } catch (error) {
-                console.error(`Failed to sync server ${server.name}:`, error);
+                console.error(`Failed to sync server ${server.name}: `, error);
             }
         }
         DeviceSyncService.syncCounter++;
