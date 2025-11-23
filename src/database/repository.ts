@@ -138,8 +138,39 @@ export const Repository = {
         return await db.getAllAsync<Schedule>('SELECT * FROM schedules');
     },
 
-    deleteSchedule: async (id: number) => {
-        await db.runAsync('DELETE FROM schedules WHERE id = ?', [id]);
+    deleteSchedule: async (scheduleId: number): Promise<void> => {
+        await db.runAsync('DELETE FROM schedules WHERE id = ?', [scheduleId]);
+    },
+
+    // Export methods - Get all data with joins
+    getAllEnergyData: async (): Promise<Array<EnergyData & { node_name: string }>> => {
+        const result = await db.getAllAsync<EnergyData & { node_name: string }>(
+            `SELECT e.*, n.name as node_name 
+             FROM energy_data e 
+             LEFT JOIN nodes n ON e.node_id = n.id 
+             ORDER BY e.timestamp DESC`
+        );
+        return result;
+    },
+
+    getAllSchedules: async (): Promise<Array<Schedule & { node_name: string }>> => {
+        const result = await db.getAllAsync<Schedule & { node_name: string }>(
+            `SELECT s.*, n.name as node_name 
+             FROM schedules s 
+             LEFT JOIN nodes n ON s.node_id = n.id 
+             ORDER BY s.time`
+        );
+        return result;
+    },
+
+    getAllAlerts: async (): Promise<Array<Alert & { node_name: string }>> => {
+        const result = await db.getAllAsync<Alert & { node_name: string }>(
+            `SELECT a.*, n.name as node_name 
+             FROM alerts a 
+             LEFT JOIN nodes n ON a.node_id = n.id 
+             ORDER BY a.created_at DESC`
+        );
+        return result;
     },
 
     updateSchedule: async (id: number, action: string, time: string, days: string[], isActive: number) => {
