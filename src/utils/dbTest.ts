@@ -24,7 +24,7 @@ export const runDBTests = async () => {
 
         // 4. Test Node
         console.log('4. Testing Node...');
-        const nodeId = await Repository.upsertNode(serverId, 'Test Fan', 'FAN', 'off', 25.0);
+        const nodeId = await Repository.upsertNode(serverId, 'Test Fan', 'FAN', 'Test Category', 'off', 25.0);
         const nodes = await Repository.getNodesByServer(serverId);
         if (nodes.length === 1 && nodes[0].name === 'Test Fan') console.log('✅ Node Created/Read Success');
         else console.error('❌ Node Test Failed', nodes);

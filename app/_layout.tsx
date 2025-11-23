@@ -1,11 +1,12 @@
 import { Amplify } from 'aws-amplify';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import 'react-native-get-random-values';
 import awsConfig from '../src/constants/aws-exports';
 import { initDatabase } from '../src/database';
 import { DeviceSyncService } from '../src/services/deviceSync';
+import { NotificationService } from '../src/services/notifications';
 
 // @ts-ignore
 Amplify.configure(awsConfig);
@@ -14,6 +15,7 @@ export default function RootLayout() {
   const [isDbReady, setDbReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const setupRunning = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!setupRunning.current) {
@@ -21,9 +23,19 @@ export default function RootLayout() {
       setup();
     }
 
+    // Setup notification listener
+    const subscription = NotificationService.setupNotificationListener((notification) => {
+      // Navigate to alerts screen when notification is tapped
+      const data = notification.request.content.data;
+      if (data.alertId || data.type === 'alert') {
+        router.push('/(tabs)/alerts');
+      }
+    });
+
     // Cleanup on unmount
     return () => {
       DeviceSyncService.stopBackgroundSync();
+      subscription.remove();
     };
   }, []);
 
@@ -32,6 +44,9 @@ export default function RootLayout() {
       setInitError(null);
       await initDatabase();
       console.log("✅ Success: Database & Tables are ready.");
+
+      // Request notification permissions
+      await NotificationService.requestPermissions();
 
       setDbReady(true);
 

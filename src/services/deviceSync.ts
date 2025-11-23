@@ -111,10 +111,18 @@ export const DeviceSyncService = {
                             );
 
                             if (!hasRecentAlert) {
+                                const alertMessage = `${node.name} is overheating (${node.temperature}°C)`;
                                 await Repository.createAlert(
                                     nodeId,
                                     'critical',
-                                    `${node.name} is overheating (${node.temperature}°C)`
+                                    alertMessage
+                                );
+
+                                // Send push notification
+                                await NotificationService.sendAlertNotification(
+                                    '🔥 Critical Alert',
+                                    alertMessage,
+                                    { nodeId, alertId: nodeId }
                                 );
                             }
                         }

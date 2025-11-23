@@ -75,7 +75,8 @@ export default function ScheduleScreen() {
         setTime(schedule.time);
         try {
             setSelectedDays(JSON.parse(schedule.days));
-        } catch (e) {
+        } catch {
+            HapticsService.error();
             setSelectedDays([]);
         }
         setModalVisible(true);

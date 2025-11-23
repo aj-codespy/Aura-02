@@ -16,11 +16,28 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourname.projectaura"
+      "package": "com.yourname.projectaura",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "notification": {
+      "icon": "./assets/images/adaptive-icon.png",
+      "color": "#003366",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Aura Alert"
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/adaptive-icon.png",
+          "color": "#003366"
+        }
+      ]
     ]
   }
 }
