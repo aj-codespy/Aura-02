@@ -9,7 +9,7 @@ interface StatusBadgeProps {
     label?: string;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
+const StatusBadgeComponent = ({ status, label }: StatusBadgeProps) => {
     const getStyle = () => {
         switch (status) {
             case 'online':
@@ -35,6 +35,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
         </View>
     );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const StatusBadge = React.memo(StatusBadgeComponent);
 
 const styles = StyleSheet.create({
     badge: {

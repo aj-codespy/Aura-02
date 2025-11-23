@@ -78,6 +78,18 @@ export const initDatabase = async () => {
         is_read INTEGER DEFAULT 0,
         FOREIGN KEY (node_id) REFERENCES nodes (id)
       );
+
+      -- Create indexes for frequently queried columns
+      CREATE INDEX IF NOT EXISTS idx_nodes_server_id ON nodes(server_id);
+      CREATE INDEX IF NOT EXISTS idx_nodes_category ON nodes(category);
+      CREATE INDEX IF NOT EXISTS idx_nodes_status ON nodes(status);
+      CREATE INDEX IF NOT EXISTS idx_schedules_node_id ON schedules(node_id);
+      CREATE INDEX IF NOT EXISTS idx_schedules_is_active ON schedules(is_active);
+      CREATE INDEX IF NOT EXISTS idx_energy_data_node_id ON energy_data(node_id);
+      CREATE INDEX IF NOT EXISTS idx_energy_data_timestamp ON energy_data(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_alerts_node_id ON alerts(node_id);
+      CREATE INDEX IF NOT EXISTS idx_alerts_is_read ON alerts(is_read);
+      CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at);
     `);
 
     // Clean up old data to prevent memory issues

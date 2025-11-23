@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../src/components/ui/Card';
@@ -17,19 +17,21 @@ export default function DevicesScreen() {
         { id: 'lighting', name: 'Workshop Lighting', icon: 'bulb-outline', status: '3 devices unreachable' },
     ];
 
-    const handlePress = (id: string) => {
+    const handlePress = useCallback((id: string) => {
         HapticsService.light();
         router.push(`/devices/${id}`);
-    };
+    }, [router]);
+
+    const handleAddDevice = useCallback(() => {
+        HapticsService.medium();
+        router.push('/devices/add');
+    }, [router]);
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Devices</Text>
-                <TouchableOpacity style={styles.addButton} onPress={() => {
-                    HapticsService.medium();
-                    router.push('/devices/add');
-                }}>
+                <TouchableOpacity style={styles.addButton} onPress={handleAddDevice}>
                     <Ionicons name="add" size={20} color="#FFF" />
                     <Text style={styles.addButtonText}>Add Device</Text>
                 </TouchableOpacity>

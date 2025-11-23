@@ -167,17 +167,19 @@ export const DeviceSyncService = {
         }
     },
 
+    // Background Sync
+    syncInterval: null as NodeJS.Timeout | null,
+
     startBackgroundSync: () => {
-        // Clear any existing interval first
+        // Clear existing interval if any
         if (DeviceSyncService.syncInterval) {
             clearInterval(DeviceSyncService.syncInterval);
         }
 
+        console.log('Starting background sync (every 60 seconds)...');
         DeviceSyncService.syncInterval = setInterval(() => {
             DeviceSyncService.syncAll();
-        }, 30000); // Sync every 30 seconds instead of 10
-
-        console.log('Background sync started');
+        }, 60000); // Increased from 30s to 60s for better battery life
     },
 
     stopBackgroundSync: () => {
@@ -187,8 +189,6 @@ export const DeviceSyncService = {
             console.log('Background sync stopped');
         }
     },
-
-    syncInterval: null as NodeJS.Timeout | null,
 
     // Helper to toggle state
     toggleNode: async (nodeId: number, state: 'on' | 'off') => {

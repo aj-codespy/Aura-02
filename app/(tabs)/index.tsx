@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,7 +24,7 @@ export default function HomeScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const router = useRouter();
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         const nodes = await Repository.getAllNodes();
         const alerts = await Repository.getUnreadAlerts();
 
@@ -34,21 +34,21 @@ export default function HomeScreen() {
             alerts: alerts.length,
         });
         setRecentAlerts(alerts.slice(0, 3));
-    };
+    }, []);
 
     useEffect(() => {
         loadData();
         const interval = setInterval(loadData, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [loadData]);
 
-    const onRefresh = async () => {
+    const onRefresh = useCallback(async () => {
         HapticsService.medium();
         setRefreshing(true);
         await DeviceSyncService.syncAll();
         await loadData();
         setRefreshing(false);
-    };
+    }, [loadData]);
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

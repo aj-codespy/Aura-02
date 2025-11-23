@@ -16,7 +16,7 @@ interface StatCardProps {
     style?: ViewStyle;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({
+const StatCardComponent: React.FC<StatCardProps> = ({
     title,
     value,
     subtext,
@@ -48,6 +48,9 @@ export const StatCard: React.FC<StatCardProps> = ({
         </Card>
     );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const StatCard = React.memo(StatCardComponent);
 
 const styles = StyleSheet.create({
     container: {
