@@ -10,7 +10,6 @@ import { DeviceSyncService } from '../../src/services/deviceSync';
 import { Layout, Typography } from '../../src/theme';
 import { HapticsService } from '../../src/utils/haptics';
 
-import { ScheduleWidget } from '../../src/components/home/Schedule';
 import { StatCard } from '../../src/components/ui/StatCard';
 
 export default function HomeScreen() {
@@ -181,8 +180,8 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Schedule Widget */}
-        <ScheduleWidget />
+        {/* Device Status Chart */}
+        <DeviceStatusChart />
       </ScrollView>
     </SafeAreaView>
   );
