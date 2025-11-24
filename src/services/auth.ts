@@ -3,12 +3,13 @@ import { fetchAuthSession, getCurrentUser, signIn, signOut } from 'aws-amplify/a
 // Use example file as fallback for CI/CD (aws-exports.js is gitignored)
 let awsConfig;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   awsConfig = require('../constants/aws-exports').default;
 } catch {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   awsConfig = require('../constants/aws-exports.example').default;
 }
 
-const USER_KEY = 'current_user';
 // Configure Amplify
 // @ts-ignore
 Amplify.configure(awsConfig);

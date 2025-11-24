@@ -156,14 +156,14 @@ export default function HomeScreen() {
                     styles.alertIcon,
                     {
                       backgroundColor:
-                        alert.severity === 'critical' ? colors.error + '20' : colors.warning + '20',
+                        alert.level === 'critical' ? colors.error + '20' : colors.warning + '20',
                     },
                   ]}
                 >
                   <Ionicons
-                    name={alert.severity === 'critical' ? 'warning' : 'alert-circle'}
+                    name={alert.level === 'critical' ? 'warning' : 'alert-circle'}
                     size={20}
-                    color={alert.severity === 'critical' ? colors.error : colors.warning}
+                    color={alert.level === 'critical' ? colors.error : colors.warning}
                   />
                 </View>
                 <View style={styles.alertContent}>

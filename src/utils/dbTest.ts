@@ -19,7 +19,7 @@ export const runDBTests = async () => {
     console.log('3. Testing Server...');
     const serverId = await Repository.upsertServer('Test Server', '192.168.1.100', 'online');
     const servers = await Repository.getServers();
-    if (servers.length === 1 && servers[0].ip_address === '192.168.1.100')
+    if (servers.length === 1 && servers[0].local_ip_address === '192.168.1.100')
       console.log('✅ Server Created/Read Success');
     else console.error('❌ Server Test Failed', servers);
 

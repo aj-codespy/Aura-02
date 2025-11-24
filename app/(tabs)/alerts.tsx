@@ -22,9 +22,9 @@ export default function AlertsScreen() {
   };
 
   const renderAlert = ({ item }: { item: Alert }) => (
-    <View style={[styles.card, item.severity === 'critical' ? styles.cardCritical : null]}>
+    <View style={[styles.card, item.level === 'critical' ? styles.cardCritical : null]}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>⚠️ {item.severity.toUpperCase()}</Text>
+        <Text style={styles.cardTitle}>⚠️ {item.level.toUpperCase()}</Text>
         <Text style={styles.timestamp}>{new Date(item.created_at).toLocaleTimeString()}</Text>
       </View>
       <Text style={styles.message}>{item.message}</Text>

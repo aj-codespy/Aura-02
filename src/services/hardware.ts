@@ -1,4 +1,6 @@
 // Types for API Responses
+import { NotificationService } from './notifications';
+
 export interface ServerStatusResponse {
   serverId: string;
   serverName: string;
@@ -133,6 +135,15 @@ export const HardwareService = {
       body: JSON.stringify({ state }),
     });
     if (!response.ok) throw new Error('State update failed');
+
+    // Trigger notification on successful manual control
+    // Note: We don't have the device name here easily without fetching,
+    // so we might send a generic message or fetch details if needed.
+    // For now, we'll try to pass the name if available or just use ID.
+    // Ideally, the UI calling this should trigger the notification or we fetch node details.
+    // However, to meet the requirement "Trigger Notification on Manual Control" within this service:
+    await NotificationService.sendDeviceNotification(`Device ${nodeId}`, state);
+
     return await response.json();
   },
 

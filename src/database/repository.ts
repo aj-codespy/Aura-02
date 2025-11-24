@@ -6,12 +6,13 @@ export interface User {
   cognito_id: string;
   email: string;
   full_name: string;
+  preferences_json: string;
 }
 
 export interface Server {
   id: number;
   name: string;
-  ip_address: string;
+  local_ip_address: string;
   status: 'online' | 'offline';
   last_seen: number;
 }
@@ -23,16 +24,19 @@ export interface Node {
   type: string;
   category: string;
   status: 'on' | 'off' | 'offline';
+  state: string; // 'on', 'off', or value
   temperature: number;
+  voltage: number;
+  current: number;
 }
 
 export interface Alert {
   id: number;
-  node_id: number;
-  severity: 'info' | 'warning' | 'critical';
+  device_id: number;
+  level: 'info' | 'warning' | 'critical';
   message: string;
   created_at: number;
-  is_read: number;
+  acknowledged: number;
 }
 
 export interface Schedule {
@@ -44,22 +48,27 @@ export interface Schedule {
   is_active: number;
 }
 
-export interface EnergyData {
+export interface DataPoint {
   id: number;
   node_id: number;
   voltage: number;
   current: number;
-  power: number;
+  power_consumption: number;
   timestamp: number;
 }
 
 // Repository
 export const Repository = {
   // User
-  upsertUser: async (cognitoId: string, email: string, fullName: string) => {
+  upsertUser: async (
+    cognitoId: string,
+    email: string,
+    fullName: string,
+    preferences: string = '{}'
+  ) => {
     const result = await db.runAsync(
-      'INSERT OR REPLACE INTO users (cognito_id, email, full_name) VALUES (?, ?, ?)',
-      [cognitoId, email, fullName]
+      'INSERT OR REPLACE INTO users (cognito_id, email, full_name, preferences_json) VALUES (?, ?, ?, ?)',
+      [cognitoId, email, fullName, preferences]
     );
     return result.lastInsertRowId;
   },
@@ -70,11 +79,27 @@ export const Repository = {
 
   // Servers
   upsertServer: async (name: string, ip: string, status: string) => {
-    const result = await db.runAsync(
-      'INSERT INTO servers (name, ip_address, status, last_seen) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET status = excluded.status, last_seen = excluded.last_seen',
-      [name, ip, status, Date.now()]
+    // Check if server exists by IP
+    const existing = await db.getFirstAsync<Server>(
+      'SELECT * FROM servers WHERE local_ip_address = ?',
+      [ip]
     );
-    return result.lastInsertRowId;
+
+    if (existing) {
+      await db.runAsync('UPDATE servers SET name = ?, status = ?, last_seen = ? WHERE id = ?', [
+        name,
+        status,
+        Date.now(),
+        existing.id,
+      ]);
+      return existing.id;
+    } else {
+      const result = await db.runAsync(
+        'INSERT INTO servers (name, local_ip_address, status, last_seen) VALUES (?, ?, ?, ?)',
+        [name, ip, status, Date.now()]
+      );
+      return result.lastInsertRowId;
+    }
   },
 
   getServers: async () => {
@@ -88,7 +113,10 @@ export const Repository = {
     type: string,
     category: string,
     status: string,
-    temp?: number
+    temp: number = 0,
+    state: string = 'off',
+    voltage: number = 0,
+    current: number = 0
   ) => {
     // First, try to find existing node
     const existing = await db.getFirstAsync<Node>(
@@ -99,15 +127,15 @@ export const Repository = {
     if (existing) {
       // Update existing node
       await db.runAsync(
-        'UPDATE nodes SET type = ?, category = ?, status = ?, temperature = ? WHERE id = ?',
-        [type, category, status, temp || 0, existing.id]
+        'UPDATE nodes SET type = ?, category = ?, status = ?, temperature = ?, state = ?, voltage = ?, current = ? WHERE id = ?',
+        [type, category, status, temp, state, voltage, current, existing.id]
       );
       return existing.id;
     } else {
       // Insert new node
       const result = await db.runAsync(
-        'INSERT INTO nodes (server_id, name, type, category, status, temperature) VALUES (?, ?, ?, ?, ?, ?)',
-        [serverId, name, type, category, status, temp || 0]
+        'INSERT INTO nodes (server_id, name, type, category, status, temperature, state, voltage, current) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [serverId, name, type, category, status, temp, state, voltage, current]
       );
       return result.lastInsertRowId;
     }
@@ -151,12 +179,12 @@ export const Repository = {
   },
 
   // Export methods - Get all data with joins
-  getAllEnergyData: async (): Promise<(EnergyData & { node_name: string })[]> => {
-    const result = await db.getAllAsync<EnergyData & { node_name: string }>(
-      `SELECT e.*, n.name as node_name 
-             FROM energy_data e 
-             LEFT JOIN nodes n ON e.node_id = n.id 
-             ORDER BY e.timestamp DESC`
+  getAllDataPoints: async (): Promise<(DataPoint & { node_name: string })[]> => {
+    const result = await db.getAllAsync<DataPoint & { node_name: string }>(
+      `SELECT d.*, n.name as node_name 
+             FROM data_points d 
+             LEFT JOIN nodes n ON d.node_id = n.id 
+             ORDER BY d.timestamp DESC`
     );
     return result;
   },
@@ -175,7 +203,7 @@ export const Repository = {
     const result = await db.getAllAsync<Alert & { node_name: string }>(
       `SELECT a.*, n.name as node_name 
              FROM alerts a 
-             LEFT JOIN nodes n ON a.node_id = n.id 
+             LEFT JOIN nodes n ON a.device_id = n.id 
              ORDER BY a.created_at DESC`
     );
     return result;
@@ -194,21 +222,21 @@ export const Repository = {
     );
   },
 
-  // Energy Data
-  logEnergyData: async (nodeId: number, voltage: number, current: number) => {
+  // Data Points (formerly Energy Data)
+  logDataPoint: async (nodeId: number, voltage: number, current: number) => {
     const power = voltage * current;
     await db.runAsync(
-      'INSERT INTO energy_data (node_id, voltage, current, power, timestamp) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO data_points (node_id, voltage, current, power_consumption, timestamp) VALUES (?, ?, ?, ?, ?)',
       [nodeId, voltage, current, power, Date.now()]
     );
   },
 
   // Alerts
-  createAlert: async (nodeId: number, severity: string, message: string) => {
+  createAlert: async (deviceId: number, level: string, message: string) => {
     try {
       await db.runAsync(
-        'INSERT INTO alerts (node_id, severity, message, created_at) VALUES (?, ?, ?, ?)',
-        [nodeId, severity, message, Date.now()]
+        'INSERT INTO alerts (device_id, level, message, created_at) VALUES (?, ?, ?, ?)',
+        [deviceId, level, message, Date.now()]
       );
     } catch (error) {
       console.error('Error creating alert:', error);
@@ -218,7 +246,7 @@ export const Repository = {
   getUnreadAlerts: async () => {
     try {
       return await db.getAllAsync<Alert>(
-        'SELECT * FROM alerts WHERE is_read = 0 ORDER BY created_at DESC'
+        'SELECT * FROM alerts WHERE acknowledged = 0 ORDER BY created_at DESC'
       );
     } catch (error) {
       console.error('Error getting alerts:', error);
@@ -228,7 +256,7 @@ export const Repository = {
 
   markAlertRead: async (alertId: number) => {
     try {
-      await db.runAsync('UPDATE alerts SET is_read = 1 WHERE id = ?', [alertId]);
+      await db.runAsync('UPDATE alerts SET acknowledged = 1 WHERE id = ?', [alertId]);
     } catch (error) {
       console.error('Error marking alert read:', error);
     }
@@ -239,7 +267,7 @@ export const Repository = {
     try {
       await db.execAsync(`
         DELETE FROM alerts;
-        DELETE FROM energy_data;
+        DELETE FROM data_points;
         DELETE FROM schedules;
         DELETE FROM nodes;
         DELETE FROM servers;

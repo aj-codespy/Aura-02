@@ -14,7 +14,7 @@ export interface ExportResult {
 export interface ImportResult {
   success: boolean;
   imported: {
-    energyData: number;
+    dataPoints: number;
     schedules: number;
     devices: number;
     alerts: number;
@@ -35,9 +35,9 @@ export const DataExportService = {
 
       const files: string[] = [];
 
-      // Export Energy Data
-      const energyFile = await DataExportService.exportEnergyData(exportDir, timestamp);
-      if (energyFile) files.push(energyFile);
+      // Export Data Points (formerly Energy Data)
+      const dataPointsFile = await DataExportService.exportDataPoints(exportDir, timestamp);
+      if (dataPointsFile) files.push(dataPointsFile);
 
       // Export Schedules
       const schedulesFile = await DataExportService.exportSchedules(exportDir, timestamp);
@@ -74,24 +74,25 @@ export const DataExportService = {
     }
   },
 
-  // Export energy data to CSV
-  exportEnergyData: async (dir: string, timestamp: string): Promise<string | null> => {
+  // Export data points to CSV
+  exportDataPoints: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
-      const data = await Repository.getAllEnergyData();
+      const data = await Repository.getAllDataPoints();
       if (data.length === 0) return null;
 
       const csv = [
-        'timestamp,node_id,node_name,voltage,current,power',
+        'timestamp,node_id,node_name,voltage,current,power_consumption',
         ...data.map(
-          d => `${d.timestamp},${d.node_id},"${d.node_name}",${d.voltage},${d.current},${d.power}`
+          d =>
+            `${d.timestamp},${d.node_id},"${d.node_name}",${d.voltage},${d.current},${d.power_consumption}`
         ),
       ].join('\n');
 
-      const filename = `${dir}energy_data_${timestamp}.csv`;
+      const filename = `${dir}data_points_${timestamp}.csv`;
       await FileSystem.writeAsStringAsync(filename, csv);
       return filename;
     } catch (error) {
-      console.error('Energy data export error:', error);
+      console.error('Data points export error:', error);
       return null;
     }
   },
@@ -126,10 +127,10 @@ export const DataExportService = {
       if (devices.length === 0) return null;
 
       const csv = [
-        'id,name,type,category,status,temperature,server_id',
+        'id,name,type,category,status,temperature,server_id,state,voltage,current',
         ...devices.map(
           d =>
-            `${d.id},"${d.name}",${d.type},"${d.category}",${d.status},${d.temperature || ''},${d.server_id}`
+            `${d.id},"${d.name}",${d.type},"${d.category}",${d.status},${d.temperature || ''},${d.server_id},${d.state || ''},${d.voltage || ''},${d.current || ''}`
         ),
       ].join('\n');
 
@@ -149,10 +150,10 @@ export const DataExportService = {
       if (alerts.length === 0) return null;
 
       const csv = [
-        'id,node_id,node_name,severity,message,created_at,is_read',
+        'id,device_id,node_name,level,message,created_at,acknowledged',
         ...alerts.map(
           a =>
-            `${a.id},${a.node_id},"${a.node_name}",${a.severity},"${a.message}",${a.created_at},${a.is_read ? 1 : 0}`
+            `${a.id},${a.device_id},"${a.node_name}",${a.level},"${a.message}",${a.created_at},${a.acknowledged ? 1 : 0}`
         ),
       ].join('\n');
 
@@ -170,7 +171,7 @@ export const DataExportService = {
     const result: ImportResult = {
       success: false,
       imported: {
-        energyData: 0,
+        dataPoints: 0,
         schedules: 0,
         devices: 0,
         alerts: 0,
@@ -182,8 +183,8 @@ export const DataExportService = {
       const content = await FileSystem.readAsStringAsync(fileUri);
       const filename = fileUri.split('/').pop()?.toLowerCase() || '';
 
-      if (filename.includes('energy')) {
-        result.imported.energyData = await DataExportService.importEnergyData(content);
+      if (filename.includes('data_points') || filename.includes('energy')) {
+        result.imported.dataPoints = await DataExportService.importDataPoints(content);
       } else if (filename.includes('schedule')) {
         result.imported.schedules = await DataExportService.importSchedules(content);
       } else if (filename.includes('device')) {
@@ -202,8 +203,8 @@ export const DataExportService = {
     }
   },
 
-  // Import energy data from CSV
-  importEnergyData: async (csv: string): Promise<number> => {
+  // Import data points from CSV
+  importDataPoints: async (csv: string): Promise<number> => {
     const lines = csv.split('\n').slice(1); // Skip header
     let count = 0;
 
@@ -212,7 +213,7 @@ export const DataExportService = {
 
       const [, nodeId, , voltage, current] = line.split(',').map(v => v.replace(/"/g, '').trim());
 
-      await Repository.logEnergyData(parseInt(nodeId), parseFloat(voltage), parseFloat(current));
+      await Repository.logDataPoint(parseInt(nodeId), parseFloat(voltage), parseFloat(current));
       count++;
     }
 
@@ -249,11 +250,15 @@ export const DataExportService = {
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      const [, name, type, category, status, temperature, serverId] = line
-        .split(',')
-        .map(v => v.replace(/"/g, '').trim());
+      // Check if CSV has new columns (state, voltage, current)
+      // Assuming format matches export: id,name,type,category,status,temperature,server_id,state,voltage,current
+      const parts = line.split(',').map(v => v.replace(/"/g, '').trim());
+      const [, name, type, category, status, temperature, serverId, state, voltage, current] =
+        parts;
 
       const temp = temperature ? parseFloat(temperature) : undefined;
+      const volt = voltage ? parseFloat(voltage) : 0;
+      const curr = current ? parseFloat(current) : 0;
 
       await Repository.upsertNode(
         parseInt(serverId),
@@ -261,7 +266,10 @@ export const DataExportService = {
         type,
         category,
         status as 'on' | 'off',
-        temp
+        temp,
+        state || 'off',
+        volt,
+        curr
       );
       count++;
     }
@@ -277,11 +285,12 @@ export const DataExportService = {
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      const [, nodeId, , severity, message] = line.split(',').map(v => v.replace(/"/g, '').trim());
+      // id,device_id,node_name,level,message,created_at,acknowledged
+      const [, deviceId, , level, message] = line.split(',').map(v => v.replace(/"/g, '').trim());
 
       await Repository.createAlert(
-        parseInt(nodeId),
-        severity as 'info' | 'warning' | 'critical',
+        parseInt(deviceId),
+        level as 'info' | 'warning' | 'critical',
         message
       );
       count++;

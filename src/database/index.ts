@@ -36,13 +36,14 @@ export const initDatabase = async () => {
         id INTEGER PRIMARY KEY NOT NULL,
         cognito_id TEXT UNIQUE,
         email TEXT,
-        full_name TEXT
+        full_name TEXT,
+        preferences_json TEXT
       );
 
       CREATE TABLE IF NOT EXISTS servers (
         id INTEGER PRIMARY KEY NOT NULL,
         name TEXT,
-        ip_address TEXT,
+        local_ip_address TEXT,
         status TEXT,
         last_seen INTEGER
       );
@@ -54,16 +55,19 @@ export const initDatabase = async () => {
         type TEXT,
         category TEXT,
         status TEXT,
+        state TEXT,
         temperature REAL,
+        voltage REAL,
+        current REAL,
         FOREIGN KEY (server_id) REFERENCES servers (id)
       );
 
-      CREATE TABLE IF NOT EXISTS energy_data (
+      CREATE TABLE IF NOT EXISTS data_points (
         id INTEGER PRIMARY KEY NOT NULL,
         node_id INTEGER,
         voltage REAL,
         current REAL,
-        power REAL,
+        power_consumption REAL,
         timestamp INTEGER,
         FOREIGN KEY (node_id) REFERENCES nodes (id)
       );
@@ -80,12 +84,12 @@ export const initDatabase = async () => {
 
       CREATE TABLE IF NOT EXISTS alerts (
         id INTEGER PRIMARY KEY NOT NULL,
-        node_id INTEGER,
-        severity TEXT,
+        device_id INTEGER,
+        level TEXT,
         message TEXT,
         created_at INTEGER,
-        is_read INTEGER DEFAULT 0,
-        FOREIGN KEY (node_id) REFERENCES nodes (id)
+        acknowledged INTEGER DEFAULT 0,
+        FOREIGN KEY (device_id) REFERENCES nodes (id)
       );
 
       -- Create indexes for frequently queried columns
@@ -94,10 +98,10 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_nodes_status ON nodes(status);
       CREATE INDEX IF NOT EXISTS idx_schedules_node_id ON schedules(node_id);
       CREATE INDEX IF NOT EXISTS idx_schedules_is_active ON schedules(is_active);
-      CREATE INDEX IF NOT EXISTS idx_energy_data_node_id ON energy_data(node_id);
-      CREATE INDEX IF NOT EXISTS idx_energy_data_timestamp ON energy_data(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_alerts_node_id ON alerts(node_id);
-      CREATE INDEX IF NOT EXISTS idx_alerts_is_read ON alerts(is_read);
+      CREATE INDEX IF NOT EXISTS idx_data_points_node_id ON data_points(node_id);
+      CREATE INDEX IF NOT EXISTS idx_data_points_timestamp ON data_points(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_alerts_device_id ON alerts(device_id);
+      CREATE INDEX IF NOT EXISTS idx_alerts_acknowledged ON alerts(acknowledged);
       CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at);
     `);
 

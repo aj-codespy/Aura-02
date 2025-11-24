@@ -28,7 +28,7 @@ export const BackupReminderModal: React.FC<BackupReminderModalProps> = ({
       } else {
         alert(`Backup failed: ${result.error}`);
       }
-    } catch (error) {
+    } catch {
       alert('Backup failed. Please try again.');
     } finally {
       setIsExporting(false);

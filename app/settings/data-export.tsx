@@ -72,7 +72,7 @@ export default function DataExportScreen() {
         Alert.alert(
           'Import Successful',
           `Imported ${total} records:\n` +
-            `• Energy Data: ${importResult.imported.energyData}\n` +
+            `• Data Points: ${importResult.imported.dataPoints}\n` +
             `• Schedules: ${importResult.imported.schedules}\n` +
             `• Devices: ${importResult.imported.devices}\n` +
             `• Alerts: ${importResult.imported.alerts}`,
