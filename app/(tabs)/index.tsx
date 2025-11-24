@@ -10,6 +10,7 @@ import { DeviceSyncService } from '../../src/services/deviceSync';
 import { Layout, Typography } from '../../src/theme';
 import { HapticsService } from '../../src/utils/haptics';
 
+import { DeviceStatusChart } from '../../src/components/home/DeviceStatusChart';
 import { StatCard } from '../../src/components/ui/StatCard';
 
 export default function HomeScreen() {
