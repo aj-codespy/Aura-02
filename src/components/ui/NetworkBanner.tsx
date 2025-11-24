@@ -19,7 +19,8 @@ export const NetworkBanner = () => {
 
             // Show banner if not on WiFi (cellular, unknown, or no connection)
             const isOnWifi = networkState.type === Network.NetworkStateType.WIFI;
-            setShowBanner(!isOnWifi && networkState.isConnected);
+            const isConnected = networkState.isConnected === true;
+            setShowBanner(!isOnWifi && isConnected);
         } catch (error) {
             console.error('Network check failed:', error);
             setShowBanner(false);

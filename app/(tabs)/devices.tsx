@@ -126,7 +126,7 @@ export default function DevicesScreen() {
         {devices.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No devices found.</Text>
-            <Text style={styles.emptySubtext}>Tap "Add Device" to pair a new node.</Text>
+            <Text style={styles.emptySubtext}>Tap &quot;Add Device&quot; to pair a new node.</Text>
           </View>
         )}
       </ScrollView>

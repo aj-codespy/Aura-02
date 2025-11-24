@@ -6,41 +6,6 @@ import { Text, View } from 'react-native';
 import { ThemeProvider, useTheme } from '../../src/context/ThemeContext';
 import { Repository } from '../../src/database/repository';
 
-<Tabs.Screen
-  name="alerts"
-  options={{
-    title: 'Alerts',
-    tabBarIcon: ({ color, focused }) => (
-      <View>
-        <Ionicons
-          name={focused ? 'notifications' : 'notifications-outline'}
-          size={24}
-          color={color}
-        />
-        {unreadCount > 0 && (
-          <View
-            style={{
-              position: 'absolute',
-              right: -6,
-              top: -3,
-              backgroundColor: colors.error,
-              borderRadius: 6,
-              width: 12,
-              height: 12,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 8, fontWeight: 'bold' }}>
-              {unreadCount}
-            </Text>
-          </View>
-        )}
-      </View>
-    ),
-  }}
-/>
-{/* Hidden Tabs */ }
 function TabNavigator() {
   const { colors } = useTheme();
   const [unreadCount, setUnreadCount] = React.useState(0);
