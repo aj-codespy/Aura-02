@@ -1,8 +1,9 @@
 import { Amplify } from 'aws-amplify';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, AppStateStatus, StyleSheet, Text, View } from 'react-native';
 import 'react-native-get-random-values';
+import { NetworkBanner } from '../src/components/ui/NetworkBanner';
 import { initDatabase } from '../src/database';
 import { DeviceSyncService } from '../src/services/deviceSync';
 import { initSentry } from '../src/services/errorTracking';
@@ -25,6 +26,7 @@ export default function RootLayout() {
   const [isDbReady, setDbReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const setupRunning = useRef(false);
+  const appState = useRef(AppState.currentState);
   const router = useRouter();
 
   useEffect(() => {
@@ -42,12 +44,30 @@ export default function RootLayout() {
       }
     });
 
+    // Setup AppState listener for background/foreground
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
     // Cleanup on unmount
     return () => {
       DeviceSyncService.stopBackgroundSync();
       subscription.remove();
+      appStateSubscription.remove();
     };
   }, []);
+
+  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      // App has come to foreground
+      console.log('App foregrounded - resuming sync');
+      DeviceSyncService.resume();
+    } else if (nextAppState.match(/inactive|background/)) {
+      // App has gone to background
+      console.log('App backgrounded - pausing sync');
+      DeviceSyncService.pause();
+    }
+
+    appState.current = nextAppState;
+  };
 
   const setup = async () => {
     try {
@@ -96,13 +116,18 @@ export default function RootLayout() {
 
   // 3. Once Ready, Render the App Navigation
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-      <Stack.Screen name="settings/index" options={{ headerShown: false }} />
-      <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
-      <Stack.Screen name="settings/help" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <NetworkBanner />
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/index" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/appearance" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/help" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/servers" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/advanced" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }
 

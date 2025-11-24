@@ -193,21 +193,71 @@ export const DeviceSyncService = {
               node.current
             );
 
-            if (node.temperature > 80) {
-              const recentAlerts = await Repository.getUnreadAlerts();
-              const hasRecentAlert = recentAlerts.some(
-                a => a.device_id === nodeId && a.message.includes(node.name)
-              );
+            // Logic / Alerts
+            const recentAlerts = await Repository.getUnreadAlerts();
 
-              if (!hasRecentAlert) {
-                const alertMessage = `${node.name} is overheating(${node.temperature}°C)`;
-                await Repository.createAlert(nodeId, 'critical', alertMessage);
-                await NotificationService.sendAlertNotification('🔥 Critical Alert', alertMessage, {
-                  nodeId,
-                  alertId: nodeId,
-                });
+            // Helper to check and create alert
+            const checkAndAlert = async (
+              condition: boolean,
+              level: 'warning' | 'critical',
+              message: string
+            ) => {
+              if (condition) {
+                const hasRecentAlert = recentAlerts.some(
+                  a => a.device_id === nodeId && a.message === message
+                );
+
+                if (!hasRecentAlert) {
+                  await Repository.createAlert(nodeId, level, message);
+                  // Only send push for critical or if it's a new warning type
+                  if (level === 'critical') {
+                    await NotificationService.sendAlertNotification(
+                      '🔥 Critical Alert',
+                      message,
+                      { nodeId, alertId: nodeId }
+                    );
+                  } else {
+                    // Silent notification for warning
+                    await NotificationService.sendAlertNotification(
+                      '⚠️ Warning',
+                      message,
+                      { nodeId, alertId: nodeId }
+                    );
+                  }
+                }
               }
-            }
+            };
+
+            // Temperature Checks
+            await checkAndAlert(
+              node.temperature > 95,
+              'critical',
+              `${node.name} is critically overheating (${node.temperature}°C)`
+            );
+            await checkAndAlert(
+              node.temperature > 80 && node.temperature <= 95,
+              'warning',
+              `${node.name} is running hot (${node.temperature}°C)`
+            );
+
+            // Voltage Checks
+            await checkAndAlert(
+              node.voltage < 180,
+              'warning',
+              `${node.name} voltage low (${node.voltage}V)`
+            );
+            await checkAndAlert(
+              node.voltage > 250,
+              'warning',
+              `${node.name} voltage high (${node.voltage}V)`
+            );
+
+            // Current Checks (Rated Limit assumed 15A)
+            await checkAndAlert(
+              node.current > 15,
+              'critical',
+              `${node.name} overcurrent detected (${node.current}A)`
+            );
 
             if (USE_MOCK && DeviceSyncService.syncCounter % 3 === 0) {
               const vol = 220 + Math.random() * 20;
@@ -220,6 +270,13 @@ export const DeviceSyncService = {
         console.error(`Failed to sync server ${server.name}: `, error);
       }
     }
+
+    // Cleanup old data points (keep last 30 days)
+    if (DeviceSyncService.syncCounter % 10 === 0) {
+      // Run cleanup every 10 syncs to avoid overhead
+      await Repository.deleteOldDataPoints(30);
+    }
+
     DeviceSyncService.syncCounter++;
     console.log('Device Sync Completed');
   },
@@ -305,12 +362,56 @@ export const DeviceSyncService = {
     }
   },
 
+  // Pause sync (for app backgrounding)
+  pause: () => {
+    console.log('Pausing sync service...');
+    DeviceSyncService.stopBackgroundSync();
+  },
+
+  // Resume sync (for app foregrounding)
+  resume: () => {
+    console.log('Resuming sync service...');
+    DeviceSyncService.startBackgroundSync();
+  },
+
   toggleNode: async (nodeId: number, state: 'on' | 'off') => {
-    if (USE_MOCK) return;
+    if (USE_MOCK) {
+      // Simulate network delay and random failure for testing rollback
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (Math.random() > 0.9) {
+        throw new Error('Random Mock Failure');
+      }
+      return;
+    }
+
+    // Find server for this node
+    // We need to join nodes and servers, or just fetch node then server
+    // Since we don't have a direct join method exposed yet, we'll fetch all nodes
+    const nodes = await Repository.getAllNodes();
+    const node = nodes.find(n => n.id === nodeId);
+
+    if (!node) {
+      throw new Error(`Node ${nodeId} not found`);
+    }
 
     const servers = await Repository.getServers();
-    if (servers.length > 0) {
-      // TODO: Implement proper routing to correct server
+    const server = servers.find(s => s.id === node.server_id);
+
+    if (!server) {
+      throw new Error(`Server for node ${nodeId} not found`);
+    }
+
+    // Call Hardware Service
+    // Assuming API uses node name or we need a mapping. Using node.name for now as ID.
+    // In a real scenario, we should store the hardware_id in the nodes table.
+    try {
+      await HardwareService.setNodeState(server.local_ip_address, node.name, state);
+
+      // Update local DB on success (though optimistic UI handles the view)
+      await Repository.updateNodeStatus(nodeId, state, node.temperature);
+    } catch (error) {
+      console.error('Toggle failed:', error);
+      throw error; // Re-throw to trigger rollback in UI
     }
   },
 };

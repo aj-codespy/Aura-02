@@ -1,21 +1,42 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/context/ThemeContext';
+import { AuthService } from '../../src/services/auth';
 import { Layout } from '../../src/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await AuthService.signOut();
+            router.replace('/(auth)/login');
+          },
+        },
+      ]
+    );
+  };
+
   const menuItems = [
     { icon: 'person-outline', label: 'Profile', route: '/(tabs)/profile' },
     { icon: 'notifications-outline', label: 'Notifications', route: '/(tabs)/alerts' },
     { icon: 'moon-outline', label: 'Appearance', route: '/settings/appearance' },
+    { icon: 'server-outline', label: 'Servers', route: '/settings/servers' },
+    { icon: 'settings-outline', label: 'Advanced', route: '/settings/advanced' },
     { icon: 'help-circle-outline', label: 'Help & Support', route: '/settings/help' },
-    { icon: 'log-out-outline', label: 'Log Out', route: '/(auth)/login', color: colors.error },
+    { icon: 'log-out-outline', label: 'Log Out', action: handleLogout, color: colors.error },
   ];
 
   return (
@@ -35,7 +56,13 @@ export default function SettingsScreen() {
           <TouchableOpacity
             key={index}
             style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => item.route && router.push(item.route as any)}
+            onPress={() => {
+              if (item.action) {
+                item.action();
+              } else if (item.route) {
+                router.push(item.route as any);
+              }
+            }}
           >
             <View style={styles.menuItemLeft}>
               <View

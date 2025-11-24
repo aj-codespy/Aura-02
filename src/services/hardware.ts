@@ -200,4 +200,18 @@ export const HardwareService = {
     if (!response.ok) throw new Error('Ack failed');
     return await response.json();
   },
+
+  getHistory: async (
+    ip: string
+  ): Promise<{ timestamp: number; nodeId: string; voltage: number; current: number; power: number }[]> => {
+    try {
+      const response = await fetchWithTimeout(`http://${ip}/api/v1/history`);
+      if (!response.ok) throw new Error('Failed to fetch history');
+      const data = await response.json();
+      return data.history || [];
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      return [];
+    }
+  },
 };

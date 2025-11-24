@@ -262,6 +262,78 @@ export const Repository = {
     }
   },
 
+  // Data Points Analytics
+  getDataPointsForNode: async (
+    nodeId: number,
+    startTime: number,
+    endTime: number
+  ): Promise<{ timestamp: number; voltage: number; current: number; power_consumption: number }[]> => {
+    try {
+      return await db.getAllAsync(
+        'SELECT timestamp, voltage, current, power_consumption FROM data_points WHERE node_id = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC',
+        [nodeId, startTime, endTime]
+      );
+    } catch (error) {
+      console.error('Error getting data points:', error);
+      return [];
+    }
+  },
+
+  getAggregatedDataPoints: async (
+    nodeId: number,
+    startTime: number,
+    endTime: number,
+    buckets: number = 100
+  ): Promise<{ timestamp: number; avgVoltage: number; avgCurrent: number; avgPower: number }[]> => {
+    try {
+      // Calculate bucket size in milliseconds
+      const timeRange = endTime - startTime;
+      const bucketSize = Math.floor(timeRange / buckets);
+
+      // Query with bucketing
+      const result = await db.getAllAsync<{
+        bucket: number;
+        avgVoltage: number;
+        avgCurrent: number;
+        avgPower: number;
+      }>(
+        `SELECT 
+          ((timestamp - ?) / ?) as bucket,
+          AVG(voltage) as avgVoltage,
+          AVG(current) as avgCurrent,
+          AVG(power_consumption) as avgPower
+        FROM data_points 
+        WHERE node_id = ? AND timestamp >= ? AND timestamp <= ?
+        GROUP BY bucket
+        ORDER BY bucket ASC`,
+        [startTime, bucketSize, nodeId, startTime, endTime]
+      );
+
+      // Convert bucket index back to timestamp
+      return result.map(row => ({
+        timestamp: startTime + row.bucket * bucketSize,
+        avgVoltage: row.avgVoltage,
+        avgCurrent: row.avgCurrent,
+        avgPower: row.avgPower,
+      }));
+    } catch (error) {
+      console.error('Error getting aggregated data points:', error);
+      return [];
+    }
+  },
+
+  deleteOldDataPoints: async (daysToKeep: number = 30) => {
+    try {
+      const cutoffTime = Date.now() - daysToKeep * 24 * 60 * 60 * 1000;
+      const result = await db.runAsync('DELETE FROM data_points WHERE timestamp < ?', [
+        cutoffTime,
+      ]);
+      console.log(`Deleted ${result.changes} old data points`);
+    } catch (error) {
+      console.error('Error deleting old data points:', error);
+    }
+  },
+
   // Test Helpers
   clearDatabase: async () => {
     try {

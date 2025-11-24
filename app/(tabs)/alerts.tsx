@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Alert, Repository } from '../../src/database/repository';
+import { Colors, Layout } from '../../src/theme';
 
 export default function AlertsScreen() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -21,10 +22,22 @@ export default function AlertsScreen() {
     loadAlerts();
   };
 
+  const handleMarkAllRead = async () => {
+    // Ideally, Repository should have a bulk update method.
+    // For now, we'll iterate (or add a method to Repository later).
+    // Let's assume we iterate for now to be safe without changing Repository interface yet.
+    for (const alert of alerts) {
+      await Repository.markAlertRead(alert.id);
+    }
+    loadAlerts();
+  };
+
   const renderAlert = ({ item }: { item: Alert }) => (
     <View style={[styles.card, item.level === 'critical' ? styles.cardCritical : null]}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>⚠️ {item.level.toUpperCase()}</Text>
+        <Text style={styles.cardTitle}>
+          {item.level === 'critical' ? '🔥 CRITICAL' : '⚠️ WARNING'}
+        </Text>
         <Text style={styles.timestamp}>{new Date(item.created_at).toLocaleTimeString()}</Text>
       </View>
       <Text style={styles.message}>{item.message}</Text>
@@ -38,6 +51,11 @@ export default function AlertsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Active Alerts</Text>
+        {alerts.length > 0 && (
+          <TouchableOpacity onPress={handleMarkAllRead}>
+            <Text style={styles.markAllText}>Mark All Read</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
@@ -59,33 +77,42 @@ export default function AlertsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: Colors.background,
   },
   header: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#1e1e1e',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Layout.padding,
+    paddingVertical: 16,
+    paddingTop: 60, // Adjust for status bar if needed, or use SafeAreaView
+    backgroundColor: Colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: Colors.border,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '800',
+    color: Colors.text.primary,
+  },
+  markAllText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
   },
   list: {
-    padding: 16,
+    padding: Layout.padding,
   },
   card: {
-    backgroundColor: '#1e1e1e',
+    backgroundColor: Colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#f1c40f',
+    borderLeftColor: Colors.warning,
   },
   cardCritical: {
-    borderLeftColor: '#e74c3c',
+    borderLeftColor: Colors.error,
     backgroundColor: 'rgba(231, 76, 60, 0.1)',
   },
   cardHeader: {
@@ -96,14 +123,14 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.text.primary,
   },
   timestamp: {
-    color: '#666',
+    color: Colors.text.secondary,
     fontSize: 12,
   },
   message: {
-    color: '#ddd',
+    color: Colors.text.primary,
     fontSize: 16,
     marginBottom: 12,
   },
@@ -112,7 +139,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   buttonText: {
-    color: '#007AFF',
+    color: Colors.primary,
     fontWeight: '600',
   },
   emptyState: {
@@ -120,11 +147,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#fff',
+    color: Colors.text.primary,
     fontSize: 18,
     marginBottom: 8,
   },
   emptySubtext: {
-    color: '#666',
+    color: Colors.text.secondary,
   },
 });
