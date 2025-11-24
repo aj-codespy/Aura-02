@@ -267,7 +267,9 @@ export const Repository = {
     nodeId: number,
     startTime: number,
     endTime: number
-  ): Promise<{ timestamp: number; voltage: number; current: number; power_consumption: number }[]> => {
+  ): Promise<
+    { timestamp: number; voltage: number; current: number; power_consumption: number }[]
+  > => {
     try {
       return await db.getAllAsync(
         'SELECT timestamp, voltage, current, power_consumption FROM data_points WHERE node_id = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC',
@@ -325,9 +327,7 @@ export const Repository = {
   deleteOldDataPoints: async (daysToKeep: number = 30) => {
     try {
       const cutoffTime = Date.now() - daysToKeep * 24 * 60 * 60 * 1000;
-      const result = await db.runAsync('DELETE FROM data_points WHERE timestamp < ?', [
-        cutoffTime,
-      ]);
+      const result = await db.runAsync('DELETE FROM data_points WHERE timestamp < ?', [cutoffTime]);
       console.log(`Deleted ${result.changes} old data points`);
     } catch (error) {
       console.error('Error deleting old data points:', error);

@@ -1,7 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../src/components/ui/Card';
 import { Node, Repository } from '../../src/database/repository';
@@ -30,19 +38,15 @@ export default function DevicesScreen() {
     const newState = device.status === 'on' ? 'off' : 'on';
 
     // Optimistic Update
-    setDevices(prev =>
-      prev.map(d => d.id === device.id ? { ...d, status: newState } : d)
-    );
-    HapticsService.selection();
+    setDevices(prev => prev.map(d => (d.id === device.id ? { ...d, status: newState } : d)));
+    HapticsService.light();
     setLoadingId(device.id);
 
     try {
       await DeviceSyncService.toggleNode(device.id, newState);
     } catch (error) {
       // Rollback
-      setDevices(prev =>
-        prev.map(d => d.id === device.id ? { ...d, status: device.status } : d)
-      );
+      setDevices(prev => prev.map(d => (d.id === device.id ? { ...d, status: device.status } : d)));
       HapticsService.error();
       Alert.alert('Connection Failed', 'Could not reach the device.');
     } finally {
@@ -64,12 +68,15 @@ export default function DevicesScreen() {
   }, [router]);
 
   // Group by category
-  const groupedDevices = devices.reduce((acc, device) => {
-    const category = device.category || 'Uncategorized';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(device);
-    return acc;
-  }, {} as Record<string, Node[]>);
+  const groupedDevices = devices.reduce(
+    (acc, device) => {
+      const category = device.category || 'Uncategorized';
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(device);
+      return acc;
+    },
+    {} as Record<string, Node[]>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -103,17 +110,21 @@ export default function DevicesScreen() {
                         <Ionicons
                           name={device.status === 'on' ? 'power' : 'power-outline'}
                           size={32}
-                          color={device.status === 'on' ? Colors.success : Colors.text.disabled}
+                          color={device.status === 'on' ? Colors.success : Colors.text.secondary}
                           style={styles.icon}
                         />
                       )}
                     </TouchableOpacity>
 
-                    <Text style={styles.cardTitle} numberOfLines={1}>{device.name}</Text>
-                    <Text style={[
-                      styles.cardStatus,
-                      { color: device.status === 'on' ? Colors.success : Colors.text.secondary }
-                    ]}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {device.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cardStatus,
+                        { color: device.status === 'on' ? Colors.success : Colors.text.secondary },
+                      ]}
+                    >
                       {device.status.toUpperCase()}
                     </Text>
                   </Card>

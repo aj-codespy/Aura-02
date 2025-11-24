@@ -93,9 +93,7 @@ export const EnergyLineChart = () => {
               style={[styles.rangeButton, timeRange === range && styles.rangeButtonActive]}
               onPress={() => setTimeRange(range)}
             >
-              <Text
-                style={[styles.rangeText, timeRange === range && styles.rangeTextActive]}
-              >
+              <Text style={[styles.rangeText, timeRange === range && styles.rangeTextActive]}>
                 {range}
               </Text>
             </TouchableOpacity>

@@ -211,18 +211,16 @@ export const DeviceSyncService = {
                   await Repository.createAlert(nodeId, level, message);
                   // Only send push for critical or if it's a new warning type
                   if (level === 'critical') {
-                    await NotificationService.sendAlertNotification(
-                      '🔥 Critical Alert',
-                      message,
-                      { nodeId, alertId: nodeId }
-                    );
+                    await NotificationService.sendAlertNotification('🔥 Critical Alert', message, {
+                      nodeId,
+                      alertId: nodeId,
+                    });
                   } else {
                     // Silent notification for warning
-                    await NotificationService.sendAlertNotification(
-                      '⚠️ Warning',
-                      message,
-                      { nodeId, alertId: nodeId }
-                    );
+                    await NotificationService.sendAlertNotification('⚠️ Warning', message, {
+                      nodeId,
+                      alertId: nodeId,
+                    });
                   }
                 }
               }

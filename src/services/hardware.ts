@@ -203,7 +203,9 @@ export const HardwareService = {
 
   getHistory: async (
     ip: string
-  ): Promise<{ timestamp: number; nodeId: string; voltage: number; current: number; power: number }[]> => {
+  ): Promise<
+    { timestamp: number; nodeId: string; voltage: number; current: number; power: number }[]
+  > => {
     try {
       const response = await fetchWithTimeout(`http://${ip}/api/v1/history`);
       if (!response.ok) throw new Error('Failed to fetch history');

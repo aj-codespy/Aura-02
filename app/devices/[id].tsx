@@ -1,7 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../src/components/ui/Card';
 import { StatusBadge } from '../../src/components/ui/StatusBadge';
@@ -35,7 +44,7 @@ export default function DeviceDetailScreen() {
 
   const handleToggle = async (value: boolean) => {
     if (!device) return;
-    HapticsService.selection();
+    HapticsService.light();
     const newState = value ? 'on' : 'off';
 
     // Optimistic Update
@@ -107,7 +116,7 @@ export default function DeviceDetailScreen() {
             <Text style={styles.metricLabel}>Voltage</Text>
           </Card>
           <Card style={styles.metricCard}>
-            <Ionicons name="pulse" size={24} color={Colors.info} />
+            <Ionicons name="pulse" size={24} color={Colors.primary} />
             <Text style={styles.metricValue}>{device.current} A</Text>
             <Text style={styles.metricLabel}>Current</Text>
           </Card>

@@ -63,7 +63,9 @@ export default function AppearanceScreen() {
           style={[styles.settingItem, { backgroundColor: colors.card, borderColor: colors.border }]}
         >
           <View style={styles.settingText}>
-            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>Haptic Feedback</Text>
+            <Text style={[styles.settingLabel, { color: colors.text.primary }]}>
+              Haptic Feedback
+            </Text>
             <Text style={[styles.settingDescription, { color: colors.text.secondary }]}>
               Enable vibration on button press
             </Text>
