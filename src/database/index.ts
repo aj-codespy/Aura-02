@@ -105,6 +105,20 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at);
     `);
 
+    // Migration: Add device_id column to alerts table if it doesn't exist
+    // This handles existing databases that were created before this column was added
+    try {
+      await db.execAsync(`
+        ALTER TABLE alerts ADD COLUMN device_id INTEGER;
+      `);
+      console.log('Migration: Added device_id column to alerts table');
+    } catch (error: any) {
+      // Column already exists or other error - safe to ignore
+      if (!error.message?.includes('duplicate column name')) {
+        console.log('device_id column already exists or migration not needed');
+      }
+    }
+
     // Clean up old data to prevent memory issues
     // Keep only last 100 energy data points and last 50 alerts
     await db.execAsync(`
