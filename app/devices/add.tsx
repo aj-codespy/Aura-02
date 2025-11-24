@@ -1,86 +1,129 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { DeviceSyncService } from '../../src/services/deviceSync';
-import { Colors, Layout } from '../../src/theme';
+import { HardwareService } from '../../src/services/hardware';
+import { Colors, Layout, Typography } from '../../src/theme';
 import { HapticsService } from '../../src/utils/haptics';
 
 export default function AddDeviceScreen() {
   const router = useRouter();
-  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleScan = async () => {
-    HapticsService.medium();
-    setScanning(true);
+  if (!permission) {
+    // Camera permissions are still loading.
+    return <View style={styles.container} />;
+  }
 
-    // Simulate scanning delay and discovery
+  if (!permission.granted) {
+    // Camera permissions are not granted yet.
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Ionicons name="camera-outline" size={64} color={Colors.text.secondary} />
+          <Text style={styles.message}>We need your permission to show the camera</Text>
+          <TouchableOpacity style={styles.button} onPress={requestPermission}>
+            <Text style={styles.buttonText}>Grant Permission</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (scanned || loading) return;
+
+    setScanned(true);
+    setLoading(true);
+    HapticsService.success();
+
     try {
-      await DeviceSyncService.discoverDevices();
-      setScanned(true);
-      HapticsService.success();
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      const result = await HardwareService.pairDevice(data);
+
+      if (result.success) {
+        Alert.alert('Success', result.message, [
+          {
+            text: 'OK',
+            onPress: () => {
+              setScanned(false);
+              setLoading(false);
+              router.back();
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('Error', result.message, [
+          {
+            text: 'Try Again',
+            onPress: () => {
+              setScanned(false);
+              setLoading(false);
+            },
+          },
+        ]);
+      }
     } catch (error) {
-      console.error(error);
-      HapticsService.error();
-    } finally {
-      setScanning(false);
+      Alert.alert('Error', 'An unexpected error occurred', [
+        {
+          text: 'Try Again',
+          onPress: () => {
+            setScanned(false);
+            setLoading(false);
+          },
+        },
+      ]);
     }
   };
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="close" size={28} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Scan QR Code</Text>
-      </SafeAreaView>
+      <CameraView
+        style={StyleSheet.absoluteFillObject}
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        barcodeScannerSettings={{
+          barcodeTypes: ['qr'],
+        }}
+      />
 
-      <View style={styles.cameraContainer}>
-        <View style={styles.overlay}>
-          <View style={styles.unfocusedContainer} />
-          <View style={styles.middleContainer}>
-            <View style={styles.unfocusedContainer} />
-            <View style={styles.focusedContainer}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-            </View>
-            <View style={styles.unfocusedContainer} />
-          </View>
-          <View style={styles.unfocusedContainer} />
+      <SafeAreaView style={styles.overlay}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+            disabled={loading}
+          >
+            <Ionicons name="close" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Scan QR Code</Text>
+          <View style={{ width: 28 }} />
         </View>
 
-        {scanned ? (
-          <View style={styles.statusContainer}>
-            <Ionicons name="checkmark-circle" size={64} color={Colors.success} />
-            <Text style={styles.statusText}>Device Paired!</Text>
+        <View style={styles.scanAreaContainer}>
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
+
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.loadingText}>Pairing Device...</Text>
+              </View>
+            )}
           </View>
-        ) : (
-          <View style={styles.controlsContainer}>
-            <Text style={styles.instructionText}>
-              Align the QR code within the frame to pair your device.
-            </Text>
-            <TouchableOpacity
-              style={styles.simulateButton}
-              onPress={handleScan}
-              disabled={scanning}
-            >
-              {scanning ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <Text style={styles.simulateButtonText}>Simulate Scan</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+          <Text style={styles.instructionText}>
+            Align the QR code within the frame to pair your device
+          </Text>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -90,104 +133,121 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    flexDirection: 'row',
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     padding: Layout.padding,
+    backgroundColor: Colors.background,
   },
-  backButton: {
+  message: {
+    ...Typography.body,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    color: Colors.text.secondary,
+  },
+  button: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  buttonText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  cancelButton: {
+    paddingVertical: 12,
+  },
+  cancelButtonText: {
+    color: Colors.text.secondary,
+    fontSize: 16,
+  },
+  overlay: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Layout.padding,
+    paddingTop: 16,
+  },
+  closeButton: {
     padding: 8,
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 20,
   },
   title: {
-    color: '#FFF',
     fontSize: 18,
     fontWeight: '600',
-    marginLeft: 16,
+    color: '#FFF',
   },
-  cameraContainer: {
+  scanAreaContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  unfocusedContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  middleContainer: {
-    flexDirection: 'row',
-    height: 280,
-  },
-  focusedContainer: {
+  scanFrame: {
     width: 280,
     height: 280,
-    backgroundColor: 'transparent',
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   corner: {
     position: 'absolute',
-    width: 20,
-    height: 20,
+    width: 40,
+    height: 40,
     borderColor: Colors.primary,
     borderWidth: 4,
   },
-  topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0 },
-  topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0 },
-  bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0 },
-  bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
-
-  controlsContainer: {
-    position: 'absolute',
-    bottom: 50,
+  topLeft: {
+    top: 0,
     left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  topRight: {
+    top: 0,
     right: 0,
-    alignItems: 'center',
-    padding: 20,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
   },
   instructionText: {
     color: '#FFF',
+    marginTop: 32,
+    fontSize: 16,
     textAlign: 'center',
-    marginBottom: 30,
-    fontSize: 16,
     opacity: 0.8,
-  },
-  simulateButton: {
-    backgroundColor: '#FFF',
     paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 30,
-    minWidth: 180,
-    alignItems: 'center',
   },
-  simulateButtonText: {
-    color: '#000',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  statusContainer: {
-    alignItems: 'center',
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    padding: 40,
-    borderRadius: 20,
+    alignItems: 'center',
   },
-  statusText: {
+  loadingText: {
     color: '#FFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

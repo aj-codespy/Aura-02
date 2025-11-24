@@ -1,555 +1,791 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
+import * as SQLite from 'expo-sqlite';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  FlatList,
-  Modal,
-  Alert as RNAlert,
+  Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
-  TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Node, Repository, Schedule } from '../../src/database/repository';
-import { HardwareService } from '../../src/services/hardware';
-import { Colors, Layout } from '../../src/theme';
-import { HapticsService } from '../../src/utils/haptics';
 
-// Types
-interface ScheduleWithNode extends Schedule {
-  nodeName?: string;
+// --- DATABASE UTILITY CLASS ---
+class ScheduleDB {
+  // Use a loose type because the expo-sqlite runtime object exposes WebSQL-style
+  // transaction methods that the static typing may not cover.
+  private db: any;
+  private tableName = 'schedules';
+
+  constructor() {
+    // Correctly open the database file using expo-sqlite API
+    // Prefer the typed openDatabaseSync (present in the local d.ts); at runtime
+    // fall back to openDatabase if available.
+    if (typeof (SQLite as any).openDatabaseSync === 'function') {
+      this.db = (SQLite as any).openDatabaseSync('iot_local_config.db');
+    } else if (typeof (SQLite as any).openDatabase === 'function') {
+      this.db = (SQLite as any).openDatabase('iot_local_config.db');
+    } else {
+      throw new Error('expo-sqlite: no openDatabase function available');
+    }
+    this.initDB();
+  }
+
+  private initDB() {
+    // Define a TS interface for a schedule row (used for clarity / future typing)
+    interface ScheduleRow {
+      id?: number;
+      device_id?: string | null;
+      title: string;
+      action: string;
+      time: string;
+      days_json?: string | null;
+      date?: string | null;
+      enabled: number;
+    }
+
+    this.db.transaction((tx: any) => {
+      // Create the schedules table with necessary columns
+      tx.executeSql(
+        `CREATE TABLE IF NOT EXISTS ${this.tableName} (
+              id INTEGER PRIMARY KEY NOT NULL,
+              device_id TEXT,
+              title TEXT NOT NULL,
+              action TEXT NOT NULL,
+              time TEXT NOT NULL,
+              days_json TEXT,
+              date TEXT,
+              enabled INTEGER NOT NULL
+          );`,
+        [],
+        (_tx: any, _result?: any) => {
+          console.log('DB table created successfully');
+        },
+        (_tx: any, error?: any) => {
+          console.log('DB table creation error: ', error);
+          return true;
+        }
+      );
+    });
+  }
+
+  async getSchedules() {
+    return new Promise<any[]>((resolve, reject) => {
+      return new Promise<any[]>((resolve, reject) => {
+        // Local TS interfaces for the WebSQL-style result objects exposed by expo-sqlite
+        interface SQLResultSetRowList {
+          _array: any[];
+          item?: (index: number) => any;
+          length?: number;
+        }
+        interface SQLResultSet {
+          rows: SQLResultSetRowList;
+        }
+        interface SQLTransaction {
+          executeSql(
+            sqlStatement: string,
+            args?: any[],
+            success?: (tx: SQLTransaction, result: SQLResultSet) => void,
+            error?: (tx: SQLTransaction, error?: any) => boolean | void
+          ): void;
+        }
+
+        this.db.transaction((tx: SQLTransaction) => {
+          tx.executeSql(
+            `SELECT * FROM ${this.tableName};`,
+            [],
+            // The result rows need to be mapped via rows._array
+            (_tx: SQLTransaction, result: SQLResultSet) => resolve(result.rows._array),
+            (_tx: SQLTransaction, error?: any) => {
+              reject(error);
+              return true;
+            }
+          );
+        });
+      });
+    });
+  }
+
+  async saveSchedule(schedule: any, isUpdate: boolean) {
+    const { id, device_id, title, action, time, days_json, date, enabled } = schedule;
+    const enabledInt = enabled ? 1 : 0;
+
+    if (isUpdate) {
+      return new Promise<void>((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
+          // Local TS types for the WebSQL-style objects used by expo-sqlite
+          type SQLResultSetRowList = {
+            _array: any[];
+            item?: (index: number) => any;
+            length?: number;
+          };
+          type SQLResultSet = {
+            rows: SQLResultSetRowList;
+          };
+          type SQLTransaction = {
+            executeSql(
+              sqlStatement: string,
+              args?: any[],
+              success?: (tx: SQLTransaction, result: SQLResultSet) => void,
+              error?: (tx: SQLTransaction, error?: any) => boolean | void
+            ): void;
+          };
+
+          this.db.transaction((tx: SQLTransaction) => {
+            tx.executeSql(
+              `UPDATE ${this.tableName} SET title=?, action=?, time=?, days_json=?, date=?, enabled=? WHERE id=?;`,
+              [title, action, time, days_json, date, enabledInt, id],
+              (_tx: SQLTransaction, _result?: SQLResultSet) => resolve(),
+              (_tx: SQLTransaction, error?: any) => {
+                reject(error);
+                return true;
+              }
+            );
+          });
+        });
+      });
+    } else {
+      return new Promise<void>((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
+          // Local TS interfaces for the WebSQL-style objects used by expo-sqlite
+          interface SQLResultSetRowList {
+            _array: any[];
+            item?: (index: number) => any;
+            length?: number;
+          }
+          interface SQLResultSet {
+            rows: SQLResultSetRowList;
+          }
+          interface SQLTransaction {
+            executeSql(
+              sqlStatement: string,
+              args?: any[],
+              success?: (tx: SQLTransaction, result: SQLResultSet) => void,
+              error?: (tx: SQLTransaction, error?: any) => boolean | void
+            ): void;
+          }
+
+          interface InsertScheduleRow {
+            device_id?: string | null;
+            title: string;
+            action: string;
+            time: string;
+            days_json?: string | null;
+            date?: string | null;
+            enabled: number;
+          }
+
+          const insertValues: (string | number | null)[] = [
+            (device_id as string) || 'mock-device-id',
+            title,
+            action,
+            time,
+            days_json,
+            date,
+            enabledInt,
+          ];
+
+          this.db.transaction((tx: SQLTransaction) => {
+            tx.executeSql(
+              `INSERT INTO ${this.tableName} (device_id, title, action, time, days_json, date, enabled) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+              insertValues,
+              (_tx: SQLTransaction, _result?: SQLResultSet) => resolve(),
+              (_tx: SQLTransaction, error?: any) => {
+                reject(error);
+                return true;
+              }
+            );
+          });
+        });
+      });
+    }
+  }
+
+  async deleteSchedule(id: number) {
+    return new Promise<void>((resolve, reject) => {
+      type SQLResultSetRowList = {
+        _array: any[];
+        item?: (index: number) => any;
+        length?: number;
+      };
+      type SQLResultSet = {
+        rows: SQLResultSetRowList;
+      };
+      type SQLTransaction = {
+        executeSql(
+          sqlStatement: string,
+          args?: any[],
+          success?: (tx: SQLTransaction, result: SQLResultSet) => void,
+          error?: (tx: SQLTransaction, error?: any) => boolean | void
+        ): void;
+      };
+
+      this.db.transaction((tx: SQLTransaction) => {
+        tx.executeSql(
+          `DELETE FROM ${this.tableName} WHERE id = ?;`,
+          [id],
+          (_tx: SQLTransaction, _result?: SQLResultSet) => resolve(),
+          (_tx: SQLTransaction, error?: any) => {
+            reject(error);
+            return true;
+          }
+        );
+      });
+    });
+  }
 }
 
+const dbInstance = new ScheduleDB();
+
+// --- TYPE DEFINITIONS ---
+type Action = 'On' | 'Off';
+
+interface LocalScheduleItem {
+  id: string;
+  title: string;
+  action: Action;
+  time: string;
+  days?: string[];
+  date?: string;
+  enabled: boolean;
+}
+
+type DayLabel = { short: string; full: string };
+
+// --- MAIN COMPONENT ---
 export default function ScheduleScreen() {
-  const [schedules, setSchedules] = useState<ScheduleWithNode[]>([]);
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const DARK_BLUE = '#0D2C54';
+  const WHITE = '#fff';
+  const containerWidth = useWindowDimensions().width >= 768 ? '60%' : '100%';
 
-  // Form State
-  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
-  const [action, setAction] = useState<'on' | 'off'>('on');
-  const [time, setTime] = useState('08:00');
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const dayLabels: DayLabel[] = [
+    { short: 'S', full: 'Sunday' },
+    { short: 'M', full: 'Monday' },
+    { short: 'Tu', full: 'Tuesday' },
+    { short: 'W', full: 'Wednesday' },
+    { short: 'Th', full: 'Thursday' },
+    { short: 'F', full: 'Friday' },
+    { short: 'Sa', full: 'Saturday' },
+  ];
 
-  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const [scheduleData, setScheduleData] = useState<LocalScheduleItem[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<string>('');
+  const [selectedAction, setSelectedAction] = useState<Action>('On');
+  const [time, setTime] = useState<Date>(new Date());
+  const [repeatDays, setRepeatDays] = useState<string[]>([]);
+  const [date, setDate] = useState<Date>(new Date());
+  const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
+  // --- DATA FETCHING ---
+  const loadSchedules = useCallback(async () => {
+    try {
+      const rawSchedules = await dbInstance.getSchedules();
+      // Map raw DB data to the frontend structure
+      const formattedSchedules = rawSchedules.map((item: any) => ({
+        id: String(item.id),
+        title: item.title,
+        action: item.action as Action,
+        time: item.time,
+        days: item.days_json ? JSON.parse(item.days_json) : undefined,
+        date: item.date || undefined,
+        enabled: item.enabled === 1,
+      }));
+      setScheduleData(formattedSchedules);
+    } catch (e) {
+      console.error('Failed to load schedules from SQLite. Initializing DB.', e);
+      setScheduleData([]);
+    }
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    const [loadedSchedules, loadedNodes] = await Promise.all([
-      Repository.getSchedules(),
-      Repository.getAllNodes(),
-    ]);
+  useEffect(() => {
+    // Add a small delay to ensure the native module is fully loaded (common fix for 'is not a function')
+    const timer = setTimeout(() => {
+      loadSchedules();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [loadSchedules]);
 
-    // Map node names to schedules
-    const enrichedSchedules = loadedSchedules.map(s => ({
-      ...s,
-      nodeName: loadedNodes.find(n => n.id === s.node_id)?.name || 'Unknown Device',
-    }));
+  // --- CRUD OPERATIONS ---
 
-    setSchedules(enrichedSchedules);
-    setNodes(loadedNodes);
-    setLoading(false);
+  const resetForm = () => {
+    setEditingId(null);
+    setSelectedDevice('');
+    setSelectedAction('On');
+    setTime(new Date());
+    setRepeatDays([]);
+    setDate(new Date());
   };
 
-  const handleAdd = () => {
-    setEditingSchedule(null);
-    setSelectedNodeId(nodes.length > 0 ? nodes[0].id : null);
-    setAction('on');
-    setTime('08:00');
-    setSelectedDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
-    setModalVisible(true);
-  };
-
-  const handleEdit = (schedule: Schedule) => {
-    setEditingSchedule(schedule);
-    setSelectedNodeId(schedule.node_id);
-    setAction(schedule.action);
-    setTime(schedule.time);
-    try {
-      setSelectedDays(JSON.parse(schedule.days));
-    } catch {
-      HapticsService.error();
-      setSelectedDays([]);
-    }
-    setModalVisible(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    RNAlert.alert('Delete Schedule', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await Repository.deleteSchedule(id);
-          // Try to delete from hardware (best effort)
-          // In a real app we'd need the IP. For now assuming main server or mock.
-          const servers = await Repository.getServers();
-          if (servers.length > 0) {
-            try {
-              await HardwareService.deleteSchedule(servers[0].ip_address, String(id));
-            } catch (e) {
-              console.log('Hardware delete failed', e);
-            }
-          }
-          loadData();
-          HapticsService.success();
-        },
-      },
-    ]);
-  };
-
-  const handleSave = async () => {
-    if (!selectedNodeId) return;
-
-    // Basic Time Validation
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(time)) {
-      RNAlert.alert('Invalid Time', 'Please use HH:MM format (e.g., 14:30)');
+  const handleScheduleTask = async () => {
+    if (!selectedDevice) {
+      Alert.alert('Validation Error', 'Please select a device.');
       return;
     }
 
+    const isUpdate = editingId !== null;
+    const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const deviceTitle = selectedDevice;
+
+    const schedulePayload = {
+      id: isUpdate ? Number(editingId) : undefined,
+      device_id: 'mock-device-id',
+      title: deviceTitle,
+      action: selectedAction,
+      time: timeString,
+      days_json: repeatDays.length > 0 ? JSON.stringify(repeatDays) : null,
+      date: repeatDays.length === 0 ? date.toISOString().split('T')[0] : null,
+      enabled: true,
+    };
+
     try {
-      if (editingSchedule) {
-        await Repository.updateSchedule(editingSchedule.id, action, time, selectedDays, 1);
-        // Hardware update (best effort)
-        const servers = await Repository.getServers();
-        if (servers.length > 0) {
-          await HardwareService.updateSchedule(servers[0].ip_address, String(editingSchedule.id), {
-            nodeId: selectedNodeId,
-            action,
-            time,
-            repeat: selectedDays,
-          });
-        }
-      } else {
-        await Repository.createSchedule(selectedNodeId, time, selectedDays.join(''), action);
-        // Hardware create (best effort)
-        const servers = await Repository.getServers();
-        if (servers.length > 0) {
-          await HardwareService.createSchedule(servers[0].ip_address, {
-            nodeId: selectedNodeId,
-            action,
-            time,
-            repeat: selectedDays,
-          });
-        }
-      }
-      setModalVisible(false);
-      loadData();
-      HapticsService.success();
+      await dbInstance.saveSchedule(schedulePayload, isUpdate);
+      Alert.alert('Success', isUpdate ? 'Changes saved.' : 'Task scheduled.');
+
+      loadSchedules();
+      resetForm();
     } catch (error) {
-      console.error(error);
-      RNAlert.alert('Error', 'Failed to save schedule');
+      Alert.alert('Error', 'Failed to save task to local database.');
     }
   };
 
-  const toggleDay = (day: string) => {
-    HapticsService.light();
-    if (selectedDays.includes(day)) {
-      setSelectedDays(selectedDays.filter(d => d !== day));
-    } else {
-      setSelectedDays([...selectedDays, day]);
+  const handleEditTask = (id: string) => {
+    const item = scheduleData.find(s => s.id === id);
+    if (item) {
+      setEditingId(item.id);
+      const deviceValue = item.title.includes('Motor')
+        ? 'motor'
+        : item.title.includes('Lights')
+          ? 'lights'
+          : item.title;
+      setSelectedDevice(deviceValue);
+      setSelectedAction(item.action);
+      const [hours, minutes] = item.time.split(':').map(Number);
+      const newTime = new Date();
+      newTime.setHours(hours || 0, minutes || 0, 0, 0);
+      setTime(newTime);
+      setRepeatDays(item.days || []);
+      setDate(item.date ? new Date(item.date) : new Date());
     }
   };
 
-  const renderItem = ({ item }: { item: ScheduleWithNode }) => {
-    let daysDisplay = '';
-    try {
-      const days = JSON.parse(item.days);
-      daysDisplay = days.length === 7 ? 'Every Day' : days.join(', ');
-    } catch (e) {
-      daysDisplay = item.days;
-    }
-
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.deviceText}>{item.nodeName}</Text>
-            <View style={styles.timeRow}>
-              <Ionicons name="time-outline" size={16} color={Colors.text.secondary} />
-              <Text style={styles.timeText}>{item.time}</Text>
-              <View
-                style={[
-                  styles.actionBadge,
-                  {
-                    backgroundColor:
-                      item.action === 'on' ? Colors.success + '20' : Colors.text.secondary + '20',
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.actionText,
-                    { color: item.action === 'on' ? Colors.success : Colors.text.secondary },
-                  ]}
-                >
-                  TURN {item.action.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.daysText}>{daysDisplay}</Text>
-          </View>
-          <View style={styles.actions}>
-            <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
-              <Ionicons name="pencil" size={20} color={Colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
-              <Ionicons name="trash-outline" size={20} color={Colors.error} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+  const handleDeleteTask = (id: string, title: string) => {
+    Alert.alert(
+      'Confirm Deletion',
+      `Are you sure you want to delete "${title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dbInstance.deleteSchedule(Number(id));
+              Alert.alert('Success', 'Task deleted locally.');
+              loadSchedules();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete task locally.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
     );
   };
 
+  const toggleEnabled = async (id: string) => {
+    const currentItem = scheduleData.find(i => i.id === id);
+    if (!currentItem) return;
+
+    const payload = {
+      ...currentItem,
+      id: Number(id),
+      enabled: !currentItem.enabled,
+      days_json: currentItem.days ? JSON.stringify(currentItem.days) : null,
+      device_id: 'mock-device-id',
+    };
+
+    try {
+      await dbInstance.saveSchedule(payload, true);
+      loadSchedules();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to toggle status.');
+    }
+  };
+
+  const toggleDayInSchedule = async (id: string, day: string) => {
+    const currentItem = scheduleData.find(i => i.id === id);
+    if (!currentItem) return;
+
+    const existingDays = currentItem.days || [];
+    const newDays = existingDays.includes(day)
+      ? existingDays.filter(d => d !== day)
+      : [...existingDays, day];
+
+    const payload = {
+      ...currentItem,
+      id: Number(id),
+      days: newDays,
+      days_json: JSON.stringify(newDays),
+      device_id: 'mock-device-id',
+    };
+
+    try {
+      await dbInstance.saveSchedule(payload, true);
+      loadSchedules();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to toggle day.');
+    }
+  };
+
+  const toggleRepeatDay = (day: string) => {
+    setRepeatDays(prev => (prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]));
+  };
+
+  const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowTimePicker(false);
+    if (selectedDate) setTime(selectedDate);
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) setDate(selectedDate);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Schedules</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-          <Ionicons name="add" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
+    <ScrollView
+      contentContainerStyle={[styles.scrollContent, { width: containerWidth }]}
+      style={styles.container}
+    >
+      <Text style={styles.header}>Current Schedules</Text>
 
-      <FlatList
-        data={schedules}
-        renderItem={renderItem}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.list}
-        refreshing={loading}
-        onRefresh={loadData}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={48} color={Colors.text.secondary} />
-            <Text style={styles.emptyText}>No schedules yet</Text>
-          </View>
-        }
-      />
+      {scheduleData.length === 0 ? (
+        <Text style={styles.noTasksMessage}>
+          No running tasks. Start by scheduling a new one below! 📝
+        </Text>
+      ) : (
+        scheduleData.map(item => {
+          const isActive = item.id === editingId;
 
-      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editingSchedule ? 'Edit Schedule' : 'New Schedule'}
-            </Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.form}>
-            {/* Device Selector */}
-            <Text style={styles.label}>Device</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.deviceScroll}
+          return (
+            <View
+              key={item.id}
+              style={[
+                styles.card,
+                !item.enabled && styles.disabledCard,
+                isActive && styles.editingCard,
+              ]}
             >
-              {nodes.map(node => (
-                <TouchableOpacity
-                  key={node.id}
-                  style={[
-                    styles.deviceChip,
-                    selectedNodeId === node.id && styles.deviceChipSelected,
-                  ]}
-                  onPress={() => setSelectedNodeId(node.id)}
-                >
-                  <Text
-                    style={[
-                      styles.deviceChipText,
-                      selectedNodeId === node.id && styles.deviceChipTextSelected,
-                    ]}
-                  >
-                    {node.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <View style={styles.icons}>
+                  <TouchableOpacity onPress={() => handleEditTask(item.id)}>
+                    <MaterialIcons
+                      name="edit"
+                      size={18}
+                      color={isActive ? DARK_BLUE : '#6c757d'}
+                      style={styles.icon}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteTask(item.id, item.title)}>
+                    <MaterialIcons name="delete" size={18} color="#dc3545" style={styles.icon} />
+                  </TouchableOpacity>
+                  <Switch value={item.enabled} onValueChange={() => toggleEnabled(item.id)} />
+                </View>
+              </View>
+              <Text style={styles.cardSubText}>
+                Turn <Text style={styles.bold}>{item.action}</Text> at{' '}
+                <Text style={styles.bold}>{item.time}</Text>
+              </Text>
+              {item.date ? (
+                <Text style={styles.dateText}>On {item.date}</Text>
+              ) : (
+                <View style={styles.dayContainer}>
+                  {dayLabels.map(day => {
+                    const dayIsActive = Array.isArray(item.days) && item.days.includes(day.short);
 
-            {/* Action */}
-            <Text style={styles.label}>Action</Text>
-            <View style={styles.segmentControl}>
-              <TouchableOpacity
-                style={[styles.segment, action === 'on' && styles.segmentActive]}
-                onPress={() => setAction('on')}
-              >
-                <Text style={[styles.segmentText, action === 'on' && styles.segmentTextActive]}>
-                  Turn ON
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segment, action === 'off' && styles.segmentActive]}
-                onPress={() => setAction('off')}
-              >
-                <Text style={[styles.segmentText, action === 'off' && styles.segmentTextActive]}>
-                  Turn OFF
-                </Text>
-              </TouchableOpacity>
+                    return (
+                      <TouchableOpacity
+                        key={day.short}
+                        onPress={() => toggleDayInSchedule(item.id, day.short)}
+                        style={[styles.day, dayIsActive ? styles.activeDay : styles.inactiveDay]}
+                      >
+                        <Text style={[styles.dayText, { color: dayIsActive ? WHITE : DARK_BLUE }]}>
+                          {day.short}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
+          );
+        })
+      )}
 
-            {/* Time */}
-            <Text style={styles.label}>Time (HH:MM)</Text>
-            <TextInput
-              style={styles.input}
-              value={time}
-              onChangeText={setTime}
-              placeholder="08:00"
-              keyboardType="numbers-and-punctuation"
-              maxLength={5}
-            />
-
-            {/* Days */}
-            <Text style={styles.label}>Repeat</Text>
-            <View style={styles.daysRow}>
-              {DAYS.map(day => (
-                <TouchableOpacity
-                  key={day}
-                  style={[styles.dayCircle, selectedDays.includes(day) && styles.dayCircleActive]}
-                  onPress={() => toggleDay(day)}
-                >
-                  <Text
-                    style={[styles.dayText, selectedDays.includes(day) && styles.dayTextActive]}
-                  >
-                    {day.charAt(0)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save Schedule</Text>
-            </TouchableOpacity>
-          </View>
+      <Text style={styles.header}>{editingId !== null ? 'Edit Task' : 'New Task'}</Text>
+      <View style={styles.newTask}>
+        <Text style={styles.label}>Device</Text>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={selectedDevice}
+            onValueChange={itemValue => setSelectedDevice(itemValue as string)}
+            style={styles.picker}
+            dropdownIconColor={DARK_BLUE}
+          >
+            <Picker.Item label="Select a device to control" value="" />
+            <Picker.Item label="Main Conveyor Motor" value="motor" />
+            <Picker.Item label="Workshop Lights" value="lights" />
+            <Picker.Item label="HVAC Unit 1" value="HVAC Unit 1" />
+            <Picker.Item label="Assembly Line 2" value="Assembly Line 2" />
+          </Picker>
         </View>
-      </Modal>
-    </SafeAreaView>
+
+        <Text style={styles.label}>Action</Text>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={selectedAction}
+            onValueChange={itemValue => setSelectedAction(itemValue as Action)}
+            style={styles.picker}
+            dropdownIconColor={DARK_BLUE}
+          >
+            <Picker.Item label="Turn On" value="On" />
+            <Picker.Item label="Turn Off" value="Off" />
+          </Picker>
+        </View>
+
+        <Text style={styles.label}>Time</Text>
+        <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.input}>
+          <Text>
+            {time.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+        </TouchableOpacity>
+        {showTimePicker && (
+          <DateTimePicker
+            value={time}
+            mode="time"
+            is24Hour={true}
+            display="default"
+            onChange={handleTimeChange}
+          />
+        )}
+
+        <Text style={styles.label}>Repeat Task</Text>
+        <View style={styles.dayContainer}>
+          {dayLabels.map(day => {
+            const isActive = repeatDays.includes(day.short);
+            const dayTextColor = isActive ? WHITE : DARK_BLUE;
+
+            return (
+              <TouchableOpacity
+                key={day.short}
+                onPress={() => toggleRepeatDay(day.short)}
+                style={[styles.day, isActive ? styles.activeDay : styles.inactiveDay]}
+              >
+                <Text style={[styles.dayText, { color: dayTextColor }]}>{day.short}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {repeatDays.length === 0 && (
+          <>
+            <Text style={styles.label}>Date (One-time Schedule)</Text>
+            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.input}>
+              <Text>{date.toDateString()}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
+          </>
+        )}
+
+        <View style={styles.buttonRow}>
+          <TouchableOpacity onPress={resetForm} style={styles.cancelButton}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleScheduleTask} style={styles.scheduleButton}>
+            <Text style={styles.scheduleText}>
+              {editingId !== null ? 'Save Changes' : 'Schedule Task'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#f3f4f6',
     flex: 1,
-    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    padding: 16,
+    alignItems: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 600,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Layout.padding,
-    paddingVertical: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0D2C54',
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  list: {
-    padding: Layout.padding,
-    gap: 12,
+  noTasksMessage: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#6c757d',
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   card: {
-    backgroundColor: Colors.card,
+    backgroundColor: '#fff',
+    width: '100%',
     padding: 16,
     borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    alignSelf: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'transparent',
+  },
+  editingCard: {
+    borderColor: '#0D2C54',
+    borderWidth: 2,
+  },
+  disabledCard: {
+    backgroundColor: '#e9e9e9',
+    opacity: 0.7,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  deviceText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text.primary,
-    marginBottom: 8,
-  },
-  timeRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
   },
-  timeText: {
+  cardTitle: {
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text.primary,
+    color: '#0D2C54',
   },
-  actionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+  cardSubText: {
+    marginTop: 6,
+    color: '#6c757d',
   },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '700',
+  bold: {
+    fontWeight: 'bold',
+    color: '#0D2C54',
   },
-  daysText: {
-    fontSize: 14,
-    color: Colors.text.secondary,
-  },
-  actions: {
+  icons: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  iconBtn: {
-    padding: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 8,
-  },
-  emptyState: {
     alignItems: 'center',
-    marginTop: 60,
-    gap: 16,
   },
-  emptyText: {
-    fontSize: 16,
-    color: Colors.text.secondary,
+  icon: {
+    marginHorizontal: 8,
   },
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  modalHeader: {
+  dayContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    marginTop: 10,
+    flexWrap: 'wrap',
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  cancelText: {
-    fontSize: 16,
-    color: Colors.primary,
-  },
-  form: {
-    padding: 20,
-    gap: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text.secondary,
-    marginBottom: 8,
-  },
-  deviceScroll: {
-    flexGrow: 0,
-    marginBottom: 8,
-  },
-  deviceChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginRight: 8,
-  },
-  deviceChipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  deviceChipText: {
-    color: Colors.text.primary,
-  },
-  deviceChipTextSelected: {
-    color: '#FFF',
-  },
-  segmentControl: {
-    flexDirection: 'row',
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 6,
-  },
-  segmentActive: {
-    backgroundColor: Colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  segmentText: {
-    fontWeight: '600',
-    color: Colors.text.secondary,
-  },
-  segmentTextActive: {
-    color: Colors.text.primary,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    fontSize: 18,
-  },
-  daysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dayCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.card,
+  day: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginHorizontal: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    marginBottom: 6,
   },
-  dayCircleActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  activeDay: {
+    backgroundColor: '#0D2C54',
+  },
+  inactiveDay: {
+    backgroundColor: '#e9ecef',
   },
   dayText: {
-    color: Colors.text.primary,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
-  dayTextActive: {
-    color: '#FFF',
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
+  newTask: {
+    backgroundColor: '#fff',
+    width: '100%',
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
+    marginBottom: 20,
+    alignSelf: 'center',
   },
-  saveButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
+  label: {
+    fontWeight: 'bold',
+    marginTop: 12,
+    marginBottom: 4,
+    color: '#0D2C54',
+  },
+  pickerWrapper: {
+    backgroundColor: '#f1f3f6',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  picker: {
+    height: 50,
+  },
+  input: {
+    backgroundColor: '#f1f3f6',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 4,
+    justifyContent: 'center',
+    height: 50,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  cancelButton: {
+    marginRight: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#0D2C54',
+  },
+  cancelText: {
+    color: '#0D2C54',
+    fontWeight: 'bold',
+  },
+  scheduleButton: {
+    backgroundColor: '#0D2C54',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  scheduleText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  dateText: {
+    color: '#6c757d',
+    marginTop: 6,
   },
 });
