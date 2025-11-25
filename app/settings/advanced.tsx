@@ -52,6 +52,27 @@ export default function AdvancedScreen() {
 
       <View style={styles.content}>
         <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>DIAGNOSTICS</Text>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push('/settings/test-suite')}
+          >
+            <View style={styles.buttonContent}>
+              <Ionicons name="pulse-outline" size={20} color={colors.primary} />
+              <View style={styles.buttonText}>
+                <Text style={[styles.buttonLabel, { color: colors.text.primary }]}>
+                  System Check
+                </Text>
+                <Text style={[styles.buttonDescription, { color: colors.text.secondary }]}>
+                  Run self-tests for DB, Notifications, etc.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text.secondary }]}>DANGER ZONE</Text>
 
           <TouchableOpacity
@@ -107,6 +128,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 12,
     letterSpacing: 1,
+  },
+  button: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
   },
   dangerButton: {
     padding: 16,

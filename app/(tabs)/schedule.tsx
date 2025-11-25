@@ -1,7 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
-import * as SQLite from 'expo-sqlite';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -14,232 +13,9 @@ import {
   View,
 } from 'react-native';
 
-// --- DATABASE UTILITY CLASS ---
-class ScheduleDB {
-  // Use a loose type because the expo-sqlite runtime object exposes WebSQL-style
-  // transaction methods that the static typing may not cover.
-  private db: any;
-  private tableName = 'schedules';
+import { Logger } from '../../src/services/logger';
 
-  constructor() {
-    // Correctly open the database file using expo-sqlite API
-    // Prefer the typed openDatabaseSync (present in the local d.ts); at runtime
-    // fall back to openDatabase if available.
-    if (typeof (SQLite as any).openDatabaseSync === 'function') {
-      this.db = (SQLite as any).openDatabaseSync('iot_local_config.db');
-    } else if (typeof (SQLite as any).openDatabase === 'function') {
-      this.db = (SQLite as any).openDatabase('iot_local_config.db');
-    } else {
-      throw new Error('expo-sqlite: no openDatabase function available');
-    }
-    this.initDB();
-  }
-
-  private initDB() {
-    // Define a TS interface for a schedule row (used for clarity / future typing)
-    interface ScheduleRow {
-      id?: number;
-      device_id?: string | null;
-      title: string;
-      action: string;
-      time: string;
-      days_json?: string | null;
-      date?: string | null;
-      enabled: number;
-    }
-
-    this.db.transaction((tx: any) => {
-      // Create the schedules table with necessary columns
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS ${this.tableName} (
-              id INTEGER PRIMARY KEY NOT NULL,
-              device_id TEXT,
-              title TEXT NOT NULL,
-              action TEXT NOT NULL,
-              time TEXT NOT NULL,
-              days_json TEXT,
-              date TEXT,
-              enabled INTEGER NOT NULL
-          );`,
-        [],
-        (_tx: any, _result?: any) => {
-          console.log('DB table created successfully');
-        },
-        (_tx: any, error?: any) => {
-          console.log('DB table creation error: ', error);
-          return true;
-        }
-      );
-    });
-  }
-
-  async getSchedules() {
-    return new Promise<any[]>((resolve, reject) => {
-      return new Promise<any[]>((resolve, reject) => {
-        // Local TS interfaces for the WebSQL-style result objects exposed by expo-sqlite
-        interface SQLResultSetRowList {
-          _array: any[];
-          item?: (index: number) => any;
-          length?: number;
-        }
-        interface SQLResultSet {
-          rows: SQLResultSetRowList;
-        }
-        interface SQLTransaction {
-          executeSql(
-            sqlStatement: string,
-            args?: any[],
-            success?: (tx: SQLTransaction, result: SQLResultSet) => void,
-            error?: (tx: SQLTransaction, error?: any) => boolean | void
-          ): void;
-        }
-
-        this.db.transaction((tx: SQLTransaction) => {
-          tx.executeSql(
-            `SELECT * FROM ${this.tableName};`,
-            [],
-            // The result rows need to be mapped via rows._array
-            (_tx: SQLTransaction, result: SQLResultSet) => resolve(result.rows._array),
-            (_tx: SQLTransaction, error?: any) => {
-              reject(error);
-              return true;
-            }
-          );
-        });
-      });
-    });
-  }
-
-  async saveSchedule(schedule: any, isUpdate: boolean) {
-    const { id, device_id, title, action, time, days_json, date, enabled } = schedule;
-    const enabledInt = enabled ? 1 : 0;
-
-    if (isUpdate) {
-      return new Promise<void>((resolve, reject) => {
-        return new Promise<void>((resolve, reject) => {
-          // Local TS types for the WebSQL-style objects used by expo-sqlite
-          type SQLResultSetRowList = {
-            _array: any[];
-            item?: (index: number) => any;
-            length?: number;
-          };
-          type SQLResultSet = {
-            rows: SQLResultSetRowList;
-          };
-          type SQLTransaction = {
-            executeSql(
-              sqlStatement: string,
-              args?: any[],
-              success?: (tx: SQLTransaction, result: SQLResultSet) => void,
-              error?: (tx: SQLTransaction, error?: any) => boolean | void
-            ): void;
-          };
-
-          this.db.transaction((tx: SQLTransaction) => {
-            tx.executeSql(
-              `UPDATE ${this.tableName} SET title=?, action=?, time=?, days_json=?, date=?, enabled=? WHERE id=?;`,
-              [title, action, time, days_json, date, enabledInt, id],
-              (_tx: SQLTransaction, _result?: SQLResultSet) => resolve(),
-              (_tx: SQLTransaction, error?: any) => {
-                reject(error);
-                return true;
-              }
-            );
-          });
-        });
-      });
-    } else {
-      return new Promise<void>((resolve, reject) => {
-        return new Promise<void>((resolve, reject) => {
-          // Local TS interfaces for the WebSQL-style objects used by expo-sqlite
-          interface SQLResultSetRowList {
-            _array: any[];
-            item?: (index: number) => any;
-            length?: number;
-          }
-          interface SQLResultSet {
-            rows: SQLResultSetRowList;
-          }
-          interface SQLTransaction {
-            executeSql(
-              sqlStatement: string,
-              args?: any[],
-              success?: (tx: SQLTransaction, result: SQLResultSet) => void,
-              error?: (tx: SQLTransaction, error?: any) => boolean | void
-            ): void;
-          }
-
-          interface InsertScheduleRow {
-            device_id?: string | null;
-            title: string;
-            action: string;
-            time: string;
-            days_json?: string | null;
-            date?: string | null;
-            enabled: number;
-          }
-
-          const insertValues: (string | number | null)[] = [
-            (device_id as string) || 'mock-device-id',
-            title,
-            action,
-            time,
-            days_json,
-            date,
-            enabledInt,
-          ];
-
-          this.db.transaction((tx: SQLTransaction) => {
-            tx.executeSql(
-              `INSERT INTO ${this.tableName} (device_id, title, action, time, days_json, date, enabled) VALUES (?, ?, ?, ?, ?, ?, ?);`,
-              insertValues,
-              (_tx: SQLTransaction, _result?: SQLResultSet) => resolve(),
-              (_tx: SQLTransaction, error?: any) => {
-                reject(error);
-                return true;
-              }
-            );
-          });
-        });
-      });
-    }
-  }
-
-  async deleteSchedule(id: number) {
-    return new Promise<void>((resolve, reject) => {
-      type SQLResultSetRowList = {
-        _array: any[];
-        item?: (index: number) => any;
-        length?: number;
-      };
-      type SQLResultSet = {
-        rows: SQLResultSetRowList;
-      };
-      type SQLTransaction = {
-        executeSql(
-          sqlStatement: string,
-          args?: any[],
-          success?: (tx: SQLTransaction, result: SQLResultSet) => void,
-          error?: (tx: SQLTransaction, error?: any) => boolean | void
-        ): void;
-      };
-
-      this.db.transaction((tx: SQLTransaction) => {
-        tx.executeSql(
-          `DELETE FROM ${this.tableName} WHERE id = ?;`,
-          [id],
-          (_tx: SQLTransaction, _result?: SQLResultSet) => resolve(),
-          (_tx: SQLTransaction, error?: any) => {
-            reject(error);
-            return true;
-          }
-        );
-      });
-    });
-  }
-}
-
-const dbInstance = new ScheduleDB();
+import { Repository } from '../../src/database/repository';
 
 // --- TYPE DEFINITIONS ---
 type Action = 'On' | 'Off';
@@ -285,7 +61,7 @@ export default function ScheduleScreen() {
   // --- DATA FETCHING ---
   const loadSchedules = useCallback(async () => {
     try {
-      const rawSchedules = await dbInstance.getSchedules();
+      const rawSchedules = await Repository.getSchedules();
       // Map raw DB data to the frontend structure
       const formattedSchedules = rawSchedules.map((item: any) => ({
         id: String(item.id),
@@ -298,7 +74,7 @@ export default function ScheduleScreen() {
       }));
       setScheduleData(formattedSchedules);
     } catch (e) {
-      console.error('Failed to load schedules from SQLite. Initializing DB.', e);
+      Logger.error('Failed to load schedules from Repository.', e);
       setScheduleData([]);
     }
   }, []);
@@ -344,8 +120,29 @@ export default function ScheduleScreen() {
     };
 
     try {
-      await dbInstance.saveSchedule(schedulePayload, isUpdate);
-      Alert.alert('Success', isUpdate ? 'Changes saved.' : 'Task scheduled.');
+      if (isUpdate) {
+        await Repository.updateSchedule(
+          Number(editingId),
+          deviceTitle,
+          selectedAction,
+          timeString,
+          schedulePayload.days_json,
+          schedulePayload.date,
+          schedulePayload.enabled ? 1 : 0
+        );
+        Alert.alert('Success', 'Changes saved.');
+      } else {
+        await Repository.createSchedule(
+          'mock-device-id',
+          deviceTitle,
+          selectedAction,
+          timeString,
+          schedulePayload.days_json,
+          schedulePayload.date,
+          schedulePayload.enabled ? 1 : 0
+        );
+        Alert.alert('Success', 'Task scheduled.');
+      }
 
       loadSchedules();
       resetForm();
@@ -376,8 +173,8 @@ export default function ScheduleScreen() {
 
   const handleDeleteTask = (id: string, title: string) => {
     Alert.alert(
-      'Confirm Deletion',
-      `Are you sure you want to delete "${title}"?`,
+      'Delete Schedule',
+      'Are you sure you want to delete this schedule?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -385,11 +182,10 @@ export default function ScheduleScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await dbInstance.deleteSchedule(Number(id));
-              Alert.alert('Success', 'Task deleted locally.');
+              await Repository.deleteSchedule(Number(id));
               loadSchedules();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete task locally.');
+              Alert.alert('Error', 'Failed to delete schedule.');
             }
           },
         },
@@ -411,7 +207,15 @@ export default function ScheduleScreen() {
     };
 
     try {
-      await dbInstance.saveSchedule(payload, true);
+      await Repository.updateSchedule(
+        Number(id),
+        currentItem.title,
+        currentItem.action,
+        currentItem.time,
+        payload.days_json,
+        currentItem.date || null,
+        payload.enabled ? 1 : 0
+      );
       loadSchedules();
     } catch (error) {
       Alert.alert('Error', 'Failed to toggle status.');
@@ -436,7 +240,15 @@ export default function ScheduleScreen() {
     };
 
     try {
-      await dbInstance.saveSchedule(payload, true);
+      await Repository.updateSchedule(
+        Number(id),
+        currentItem.title,
+        currentItem.action,
+        currentItem.time,
+        payload.days_json,
+        currentItem.date || null,
+        currentItem.enabled ? 1 : 0
+      );
       loadSchedules();
     } catch (error) {
       Alert.alert('Error', 'Failed to toggle day.');

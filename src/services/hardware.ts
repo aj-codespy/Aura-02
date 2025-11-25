@@ -1,4 +1,5 @@
 // Types for API Responses
+import { Logger } from './logger';
 import { NotificationService } from './notifications';
 
 export interface ServerStatusResponse {
@@ -52,6 +53,8 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
   }
 };
 
+
+
 export const HardwareService = {
   // 1. Server Configuration
   getServerStatus: async (ip: string): Promise<ServerStatusResponse | null> => {
@@ -59,8 +62,8 @@ export const HardwareService = {
       const response = await fetchWithTimeout(`http://${ip}/api/v1/status`);
       if (!response.ok) throw new Error('Status check failed');
       return await response.json();
-    } catch (error) {
-      // console.log(`Server at ${ip} unreachable`);
+    } catch (_) {
+      Logger.info(`Server at ${ip} unreachable`); // Replaced console.log with Logger.info
       return null;
     }
   },
@@ -212,7 +215,7 @@ export const HardwareService = {
       const data = await response.json();
       return data.history || [];
     } catch (error) {
-      console.error('Error fetching history:', error);
+      Logger.error('Error fetching history:', error); // Replaced console.error with Logger.error
       return [];
     }
   },

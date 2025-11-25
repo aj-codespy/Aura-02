@@ -1,3 +1,4 @@
+import { Logger } from '../services/logger';
 import db from './index';
 
 // Types
@@ -41,11 +42,13 @@ export interface Alert {
 
 export interface Schedule {
   id: number;
-  node_id: number;
-  action: 'on' | 'off';
-  time: string; // HH:mm
-  days: string; // JSON array of days e.g. ["Mon", "Tue"]
-  is_active: number;
+  device_id: string | null;
+  title: string;
+  action: string;
+  time: string;
+  days_json: string | null;
+  date: string | null;
+  enabled: number;
 }
 
 export interface DataPoint {
@@ -162,10 +165,18 @@ export const Repository = {
   },
 
   // Schedules
-  createSchedule: async (nodeId: number, time: string, days: string, action: 'on' | 'off') => {
+  createSchedule: async (
+    deviceId: string | null,
+    title: string,
+    action: string,
+    time: string,
+    daysJson: string | null,
+    date: string | null,
+    enabled: number
+  ) => {
     const result = await db.runAsync(
-      'INSERT INTO schedules (node_id, action, time, days, is_active) VALUES (?, ?, ?, ?, ?)',
-      [nodeId, action, time, days, 1]
+      'INSERT INTO schedules (device_id, title, action, time, days_json, date, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [deviceId, title, action, time, daysJson, date, enabled]
     );
     return result.lastInsertRowId;
   },
@@ -211,14 +222,16 @@ export const Repository = {
 
   updateSchedule: async (
     id: number,
+    title: string,
     action: string,
     time: string,
-    days: string[],
-    isActive: number
+    daysJson: string | null,
+    date: string | null,
+    enabled: number
   ) => {
     await db.runAsync(
-      'UPDATE schedules SET action = ?, time = ?, days = ?, is_active = ? WHERE id = ?',
-      [action, time, JSON.stringify(days), isActive, id]
+      'UPDATE schedules SET title = ?, action = ?, time = ?, days_json = ?, date = ?, enabled = ? WHERE id = ?',
+      [title, action, time, daysJson, date, enabled, id]
     );
   },
 
@@ -239,7 +252,7 @@ export const Repository = {
         [deviceId, level, message, Date.now()]
       );
     } catch (error) {
-      console.error('Error creating alert:', error);
+      Logger.error('Error creating alert:', error);
     }
   },
 
@@ -249,7 +262,7 @@ export const Repository = {
         'SELECT * FROM alerts WHERE acknowledged = 0 ORDER BY created_at DESC'
       );
     } catch (error) {
-      console.error('Error getting alerts:', error);
+      Logger.error('Error getting alerts:', error);
       return [];
     }
   },
@@ -258,7 +271,7 @@ export const Repository = {
     try {
       await db.runAsync('UPDATE alerts SET acknowledged = 1 WHERE id = ?', [alertId]);
     } catch (error) {
-      console.error('Error marking alert read:', error);
+      Logger.error('Error marking alert read:', error);
     }
   },
 
@@ -276,7 +289,7 @@ export const Repository = {
         [nodeId, startTime, endTime]
       );
     } catch (error) {
-      console.error('Error getting data points:', error);
+      Logger.error('Error getting data points:', error);
       return [];
     }
   },
@@ -319,7 +332,7 @@ export const Repository = {
         avgPower: row.avgPower,
       }));
     } catch (error) {
-      console.error('Error getting aggregated data points:', error);
+      Logger.error('Error getting aggregated data points:', error);
       return [];
     }
   },
@@ -328,9 +341,9 @@ export const Repository = {
     try {
       const cutoffTime = Date.now() - daysToKeep * 24 * 60 * 60 * 1000;
       const result = await db.runAsync('DELETE FROM data_points WHERE timestamp < ?', [cutoffTime]);
-      console.log(`Deleted ${result.changes} old data points`);
+      Logger.info(`Deleted ${result.changes} old data points`);
     } catch (error) {
-      console.error('Error deleting old data points:', error);
+      Logger.error('Error deleting old data points:', error);
     }
   },
 
@@ -345,9 +358,9 @@ export const Repository = {
         DELETE FROM servers;
         DELETE FROM users;
       `);
-      console.log('Database cleared');
+      Logger.info('Database cleared');
     } catch (error) {
-      console.error('Error clearing database:', error);
+      Logger.error('Error clearing database:', error);
     }
   },
 };

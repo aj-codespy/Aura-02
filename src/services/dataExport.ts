@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Repository } from '../database/repository';
+import { Logger } from './logger';
 
 const BACKUP_DATE_KEY = 'last_backup_date';
 
@@ -57,7 +58,13 @@ export const DataExportService = {
       // Share files
       if (files.length > 0) {
         // Create a zip or share first file (for simplicity, share directory)
-        await Sharing.shareAsync(exportDir);
+        // For sharing multiple files, a zip is usually better. For now, sharing the directory.
+        // If sharing a single file, you'd use:
+        // await Sharing.shareAsync(files[0], { mimeType: 'text/csv', dialogTitle: `Export ${files[0].split('/').pop()}` });
+        await Sharing.shareAsync(exportDir, {
+          mimeType: 'application/zip', // Assuming a zip would be created or handled by the system
+          dialogTitle: `Aura Data Export ${timestamp}`,
+        });
       }
 
       return {
@@ -65,7 +72,7 @@ export const DataExportService = {
         filesCreated: files,
       };
     } catch (error) {
-      console.error('Export error:', error);
+      Logger.error('Export error:', error);
       return {
         success: false,
         filesCreated: [],
@@ -78,22 +85,19 @@ export const DataExportService = {
   exportDataPoints: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const data = await Repository.getAllDataPoints();
-      if (data.length === 0) return null;
-
-      const csv = [
-        'timestamp,node_id,node_name,voltage,current,power_consumption',
-        ...data.map(
-          d =>
-            `${d.timestamp},${d.node_id},"${d.node_name}",${d.voltage},${d.current},${d.power_consumption}`
-        ),
-      ].join('\n');
-
-      const filename = `${dir}data_points_${timestamp}.csv`;
-      await FileSystem.writeAsStringAsync(filename, csv);
-      return filename;
+      const headers = ['timestamp', 'node_id', 'node_name', 'voltage', 'current', 'power_consumption'];
+      const fileName = `data_points_${timestamp}.csv`;
+      return await DataExportService.exportToCSV(
+        data,
+        headers,
+        fileName,
+        dir,
+        d =>
+          `${d.timestamp},${d.node_id},"${d.node_name}",${d.voltage},${d.current},${d.power_consumption}`
+      );
     } catch (error) {
-      console.error('Data points export error:', error);
-      return null;
+      Logger.error('Data points export error:', error);
+      throw error;
     }
   },
 
@@ -101,22 +105,19 @@ export const DataExportService = {
   exportSchedules: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const schedules = await Repository.getAllSchedules();
-      if (schedules.length === 0) return null;
-
-      const csv = [
-        'id,node_id,node_name,time,days,action,is_active',
-        ...schedules.map(
-          s =>
-            `${s.id},${s.node_id},"${s.node_name}",${s.time},${s.days},${s.action},${s.is_active ? 1 : 0}`
-        ),
-      ].join('\n');
-
-      const filename = `${dir}schedules_${timestamp}.csv`;
-      await FileSystem.writeAsStringAsync(filename, csv);
-      return filename;
+      const headers = ['id', 'device_id', 'title', 'action', 'time', 'days_json', 'date', 'enabled'];
+      const fileName = `schedules_${timestamp}.csv`;
+      return await DataExportService.exportToCSV(
+        schedules,
+        headers,
+        fileName,
+        dir,
+        s =>
+          `${s.id},${s.device_id || ''},"${s.title}",${s.action},${s.time},"${s.days_json || ''}",${s.date || ''},${s.enabled}`
+      );
     } catch (error) {
-      console.error('Schedules export error:', error);
-      return null;
+      Logger.error('Schedules export error:', error);
+      throw error;
     }
   },
 
@@ -124,22 +125,30 @@ export const DataExportService = {
   exportDevices: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const devices = await Repository.getAllNodes();
-      if (devices.length === 0) return null;
-
-      const csv = [
-        'id,name,type,category,status,temperature,server_id,state,voltage,current',
-        ...devices.map(
-          d =>
-            `${d.id},"${d.name}",${d.type},"${d.category}",${d.status},${d.temperature || ''},${d.server_id},${d.state || ''},${d.voltage || ''},${d.current || ''}`
-        ),
-      ].join('\n');
-
-      const filename = `${dir}devices_${timestamp}.csv`;
-      await FileSystem.writeAsStringAsync(filename, csv);
-      return filename;
+      const headers = [
+        'id',
+        'name',
+        'type',
+        'category',
+        'status',
+        'temperature',
+        'server_id',
+        'state',
+        'voltage',
+        'current',
+      ];
+      const fileName = `devices_${timestamp}.csv`;
+      return await DataExportService.exportToCSV(
+        devices,
+        headers,
+        fileName,
+        dir,
+        d =>
+          `${d.id},"${d.name}",${d.type},"${d.category}",${d.status},${d.temperature || ''},${d.server_id},${d.state || ''},${d.voltage || ''},${d.current || ''}`
+      );
     } catch (error) {
-      console.error('Devices export error:', error);
-      return null;
+      Logger.error('Devices export error:', error);
+      throw error;
     }
   },
 
@@ -147,23 +156,35 @@ export const DataExportService = {
   exportAlerts: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const alerts = await Repository.getAllAlerts();
-      if (alerts.length === 0) return null;
-
-      const csv = [
-        'id,device_id,node_name,level,message,created_at,acknowledged',
-        ...alerts.map(
-          a =>
-            `${a.id},${a.device_id},"${a.node_name}",${a.level},"${a.message}",${a.created_at},${a.acknowledged ? 1 : 0}`
-        ),
-      ].join('\n');
-
-      const filename = `${dir}alerts_${timestamp}.csv`;
-      await FileSystem.writeAsStringAsync(filename, csv);
-      return filename;
+      const headers = ['id', 'device_id', 'node_name', 'level', 'message', 'created_at', 'acknowledged'];
+      const fileName = `alerts_${timestamp}.csv`;
+      return await DataExportService.exportToCSV(
+        alerts,
+        headers,
+        fileName,
+        dir,
+        a =>
+          `${a.id},${a.device_id},"${a.node_name}",${a.level},"${a.message}",${a.created_at},${a.acknowledged ? 1 : 0}`
+      );
     } catch (error) {
-      console.error('Alerts export error:', error);
-      return null;
+      Logger.error('Alerts export error:', error);
+      throw error;
     }
+  },
+
+  exportToCSV: async <T>(
+    data: T[],
+    headers: string[],
+    fileName: string,
+    dir: string,
+    rowMapper: (item: T) => string
+  ): Promise<string | null> => {
+    if (data.length === 0) return null;
+
+    const csv = [headers.join(','), ...data.map(rowMapper)].join('\n');
+    const filePath = `${dir}${fileName}`;
+    await FileSystem.writeAsStringAsync(filePath, csv);
+    return filePath;
   },
 
   // Import data from CSV file
@@ -228,13 +249,18 @@ export const DataExportService = {
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      const [, nodeId, , time, days, action] = line.split(',').map(v => v.replace(/"/g, '').trim());
+      const [, deviceId, title, action, time, daysJson, date, enabled] = line
+        .split(',')
+        .map(v => v.replace(/"/g, '').trim());
 
       await Repository.createSchedule(
-        parseInt(nodeId),
+        deviceId || null,
+        title || 'Imported Schedule',
+        action,
         time,
-        days, // Pass as string
-        action as 'on' | 'off'
+        daysJson || null,
+        date || null,
+        parseInt(enabled) || 1
       );
       count++;
     }

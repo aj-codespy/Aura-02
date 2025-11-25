@@ -1,7 +1,7 @@
 import { Amplify } from 'aws-amplify';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, AppStateStatus, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, AppStateStatus, LogBox, StyleSheet, Text, View } from 'react-native';
 import 'react-native-get-random-values';
 import { NetworkBanner } from '../src/components/ui/NetworkBanner';
 import { initDatabase } from '../src/database';
@@ -21,6 +21,12 @@ Amplify.configure(awsConfig);
 
 // Initialize error tracking
 initSentry();
+
+// Ignore specific warnings for Expo Go
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications',
+  'Require cycle:',
+]);
 
 export default function RootLayout() {
   const [isDbReady, setDbReady] = useState(false);
@@ -50,7 +56,7 @@ export default function RootLayout() {
     // Cleanup on unmount
     return () => {
       DeviceSyncService.stopBackgroundSync();
-      subscription.remove();
+      subscription?.remove();
       appStateSubscription.remove();
     };
   }, []);

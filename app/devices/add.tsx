@@ -2,7 +2,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HardwareService } from '../../src/services/hardware';
 import { Colors, Layout, Typography } from '../../src/theme';
@@ -13,6 +24,9 @@ export default function AddDeviceScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'scan' | 'manual'>('scan');
+  const [manualId, setManualId] = useState('');
+  const [manualType, setManualType] = useState('');
 
   if (!permission) {
     // Camera permissions are still loading.
@@ -39,7 +53,25 @@ export default function AddDeviceScreen() {
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned || loading) return;
+    processPairing(data);
+  };
 
+  const handleManualSubmit = () => {
+    if (!manualId.trim() || !manualType.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const manualData = JSON.stringify({
+      id: manualId,
+      type: manualType,
+      name: `Device ${manualId}`, // Optional default name
+    });
+
+    processPairing(manualData);
+  };
+
+  const processPairing = async (data: string) => {
     setScanned(true);
     setLoading(true);
     HapticsService.success();
@@ -84,13 +116,15 @@ export default function AddDeviceScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        barcodeScannerSettings={{
-          barcodeTypes: ['qr'],
-        }}
-      />
+      {mode === 'scan' && (
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr'],
+          }}
+        />
+      )}
 
       <SafeAreaView style={styles.overlay}>
         <View style={styles.header}>
@@ -101,28 +135,90 @@ export default function AddDeviceScreen() {
           >
             <Ionicons name="close" size={28} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.title}>Scan QR Code</Text>
+          <Text style={styles.title}>Add Device</Text>
           <View style={{ width: 28 }} />
         </View>
 
-        <View style={styles.scanAreaContainer}>
-          <View style={styles.scanFrame}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-
-            {loading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={styles.loadingText}>Pairing Device...</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.instructionText}>
-            Align the QR code within the frame to pair your device
-          </Text>
+        {/* Mode Switcher */}
+        <View style={styles.modeSwitcher}>
+          <TouchableOpacity
+            style={[styles.modeButton, mode === 'scan' && styles.modeButtonActive]}
+            onPress={() => setMode('scan')}
+          >
+            <Text style={[styles.modeText, mode === 'scan' && styles.modeTextActive]}>Scan QR</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeButton, mode === 'manual' && styles.modeButtonActive]}
+            onPress={() => setMode('manual')}
+          >
+            <Text style={[styles.modeText, mode === 'manual' && styles.modeTextActive]}>
+              Manual Entry
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {mode === 'scan' ? (
+          <View style={styles.scanAreaContainer}>
+            <View style={styles.scanFrame}>
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+
+              {loading && (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator size="large" color={Colors.primary} />
+                  <Text style={styles.loadingText}>Pairing Device...</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.instructionText}>
+              Align the QR code within the frame to pair your device
+            </Text>
+          </View>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.formContainer}
+          >
+            <ScrollView contentContainerStyle={styles.formContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Device ID</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter Device ID"
+                  placeholderTextColor={Colors.text.disabled}
+                  value={manualId}
+                  onChangeText={setManualId}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Device Type</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Sensor, Switch"
+                  placeholderTextColor={Colors.text.disabled}
+                  value={manualType}
+                  onChangeText={setManualType}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                onPress={handleManualSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Pair Device</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -249,5 +345,72 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     fontWeight: '600',
+  },
+  modeSwitcher: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: Layout.padding,
+    marginTop: 16,
+    gap: 12,
+  },
+  modeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  modeButtonActive: {
+    backgroundColor: Colors.primary,
+  },
+  modeText: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  modeTextActive: {
+    color: '#FFF',
+  },
+  formContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    marginTop: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  formContent: {
+    padding: Layout.padding,
+    gap: 20,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    ...Typography.caption,
+    color: Colors.text.secondary,
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: Colors.card,
+    padding: 16,
+    borderRadius: 12,
+    color: Colors.text.primary,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  submitButton: {
+    backgroundColor: Colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

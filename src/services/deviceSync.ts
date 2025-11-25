@@ -1,11 +1,18 @@
 import * as Network from 'expo-network';
 import { Repository } from '../database/repository';
 import { HardwareService } from './hardware';
+import { Logger } from './logger';
 import { NotificationService } from './notifications';
 
 // Flag to switch between Mock and Real Hardware
 // For production, set EXPO_PUBLIC_USE_MOCK_HARDWARE=false in .env
-const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_HARDWARE === 'true' || false;
+// Flag to switch between Mock and Real Hardware
+// For production, set EXPO_PUBLIC_USE_MOCK_HARDWARE=false in .env
+let USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK_HARDWARE === 'true' || false;
+
+export const setMockMode = (enabled: boolean) => {
+  USE_MOCK = enabled;
+};
 
 // Mock Hardware API (Kept for fallback/testing)
 export const MockHardware = {
@@ -80,14 +87,18 @@ export const MockHardware = {
 export const DeviceSyncService = {
   syncCounter: 0,
   consecutiveFailures: new Map<string, number>(),
+  isSyncing: false,
 
   syncAll: async (): Promise<void> => {
-    console.log('Starting Device Sync...');
+    if (DeviceSyncService.isSyncing) return;
+    DeviceSyncService.isSyncing = true;
+    Logger.info('Starting Device Sync...');
     const servers = await Repository.getServers();
 
     // Seed if empty (Mock Mode only)
     if (servers.length === 0 && USE_MOCK) {
       await Repository.upsertServer('Main Server', '192.168.1.100', 'online');
+      DeviceSyncService.isSyncing = false;
       return DeviceSyncService.syncAll();
     }
 
@@ -144,7 +155,7 @@ export const DeviceSyncService = {
               (DeviceSyncService.consecutiveFailures.get(server.local_ip_address) || 0) + 1;
             DeviceSyncService.consecutiveFailures.set(server.local_ip_address, failures);
 
-            console.log(`Server ${server.name} sync failed. Count: ${failures}`);
+            Logger.warn(`Server ${server.name} sync failed. Count: ${failures}`);
 
             // Only mark offline if failures >= 3
             if (failures >= 3) {
@@ -165,7 +176,7 @@ export const DeviceSyncService = {
         if (status === 'offline' && server.status === 'online') {
           const alertMessage = `Server ${server.name} (${server.local_ip_address}) is unreachable`;
           await Repository.createAlert(server.id, 'critical', alertMessage);
-          await NotificationService.sendAlertNotification('🚨 Server Offline', alertMessage, {
+          await NotificationService.sendAlertNotification('Server Offline', alertMessage, {
             nodeId: server.id,
           });
         }
@@ -211,13 +222,13 @@ export const DeviceSyncService = {
                   await Repository.createAlert(nodeId, level, message);
                   // Only send push for critical or if it's a new warning type
                   if (level === 'critical') {
-                    await NotificationService.sendAlertNotification('🔥 Critical Alert', message, {
+                    await NotificationService.sendAlertNotification('Critical Alert', message, {
                       nodeId,
                       alertId: nodeId,
                     });
                   } else {
                     // Silent notification for warning
-                    await NotificationService.sendAlertNotification('⚠️ Warning', message, {
+                    await NotificationService.sendAlertNotification('Warning', message, {
                       nodeId,
                       alertId: nodeId,
                     });
@@ -265,7 +276,7 @@ export const DeviceSyncService = {
           }
         }
       } catch (error) {
-        console.error(`Failed to sync server ${server.name}: `, error);
+        Logger.error(`Failed to sync server ${server.name}: `, error);
       }
     }
 
@@ -276,11 +287,12 @@ export const DeviceSyncService = {
     }
 
     DeviceSyncService.syncCounter++;
-    console.log('Device Sync Completed');
+    DeviceSyncService.isSyncing = false;
+    Logger.info('Device Sync Completed');
   },
 
   discoverDevices: async () => {
-    console.log('Scanning for devices...');
+    Logger.info('Scanning for devices...');
     if (USE_MOCK) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       await DeviceSyncService.syncAll();
@@ -289,7 +301,7 @@ export const DeviceSyncService = {
       try {
         const ip = await Network.getIpAddressAsync();
         const subnet = ip.substring(0, ip.lastIndexOf('.'));
-        console.log(`Scanning subnet: ${subnet}.x`);
+        Logger.info(`Scanning subnet: ${subnet}.x`);
 
         const scanPromises = [];
         // Scan 1-254
@@ -308,10 +320,10 @@ export const DeviceSyncService = {
               clearTimeout(timeoutId);
 
               if (status) {
-                console.log(`Found server at ${targetIp}`);
+                Logger.info(`Found server at ${targetIp}`);
                 await Repository.upsertServer(status.serverName, targetIp, 'online');
               }
-            } catch (e) {
+            } catch (_) {
               // Ignore errors
             }
           };
@@ -332,7 +344,7 @@ export const DeviceSyncService = {
         await DeviceSyncService.syncAll();
         return true;
       } catch (e) {
-        console.error('Discovery failed:', e);
+        Logger.error('Discovery failed:', e);
         return false;
       }
     }
@@ -346,7 +358,8 @@ export const DeviceSyncService = {
       clearInterval(DeviceSyncService.syncInterval);
     }
 
-    console.log('Starting background sync (every 60 seconds)...');
+    Logger.info('Starting background sync (every 60 seconds)...');
+    DeviceSyncService.syncAll(); // Initial sync
     DeviceSyncService.syncInterval = setInterval(() => {
       DeviceSyncService.syncAll();
     }, 60000);
@@ -356,19 +369,19 @@ export const DeviceSyncService = {
     if (DeviceSyncService.syncInterval) {
       clearInterval(DeviceSyncService.syncInterval);
       DeviceSyncService.syncInterval = null;
-      console.log('Background sync stopped');
+      Logger.info('Background sync stopped');
     }
   },
 
   // Pause sync (for app backgrounding)
   pause: () => {
-    console.log('Pausing sync service...');
+    Logger.info('Pausing sync service...');
     DeviceSyncService.stopBackgroundSync();
   },
 
   // Resume sync (for app foregrounding)
   resume: () => {
-    console.log('Resuming sync service...');
+    Logger.info('Resuming sync service...');
     DeviceSyncService.startBackgroundSync();
   },
 
@@ -407,8 +420,9 @@ export const DeviceSyncService = {
 
       // Update local DB on success (though optimistic UI handles the view)
       await Repository.updateNodeStatus(nodeId, state, node.temperature);
+      await DeviceSyncService.syncAll(); // Refresh state
     } catch (error) {
-      console.error('Toggle failed:', error);
+      Logger.error('Toggle failed:', error);
       throw error; // Re-throw to trigger rollback in UI
     }
   },

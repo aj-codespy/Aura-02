@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryPieChart } from '../../src/components/analytics/CategoryPieChart';
 import { EnergyLineChart } from '../../src/components/analytics/EnergyLineChart';
 import { UsageHeatmap } from '../../src/components/analytics/UsageHeatmap';
-import { ScheduleWidget } from '../../src/components/home/Schedule';
+import { SystemHealthOverview } from '../../src/components/home/SystemHealthOverview';
 import { Colors, Layout } from '../../src/theme';
 
 export default function AnalyticsScreen() {
@@ -15,13 +15,13 @@ export default function AnalyticsScreen() {
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
 
+        <SystemHealthOverview />
+
         <EnergyLineChart />
 
         <UsageHeatmap />
 
         <CategoryPieChart />
-
-        <ScheduleWidget />
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,26 +1,42 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { Logger } from './logger';
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Safely import expo-notifications
+let Notifications: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+} catch (e) {
+  Logger.warn('expo-notifications module not found', e);
+}
+
+// Configure notification behavior if module is available
+if (Notifications) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch (e) {
+    Logger.warn('Failed to set notification handler', e);
+  }
+}
 
 export const NotificationService = {
   // Request notification permissions
   requestPermissions: async (): Promise<boolean> => {
+    if (!Notifications) return false;
+
     try {
       // Check if physical device
       if (!Device.isDevice) {
-        console.log('Notifications only work on physical devices');
+        Logger.info('Notifications only work on physical devices');
         return false;
       }
 
@@ -35,8 +51,7 @@ export const NotificationService = {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Notification permission denied');
-        await AsyncStorage.setItem('notificationPermission', 'denied');
+        Logger.warn('Notification permission denied');
         return false;
       }
 
@@ -54,16 +69,18 @@ export const NotificationService = {
         });
       }
 
-      console.log('✅ Notification permissions granted');
+      Logger.info('✅ Notification permissions granted');
       return true;
     } catch (error) {
-      console.error('Error requesting notification permissions:', error);
+      Logger.error('Error requesting notification permissions:', error);
       return false;
     }
   },
 
   // Check if permissions are granted
   hasPermission: async (): Promise<boolean> => {
+    if (!Notifications) return false;
+
     try {
       const stored = await AsyncStorage.getItem('notificationPermission');
       if (stored === 'granted') {
@@ -82,10 +99,12 @@ export const NotificationService = {
     body: string,
     data?: { alertId?: number; nodeId?: number }
   ): Promise<void> => {
+    if (!Notifications) return;
+
     try {
-      const hasPermission = await NotificationService.hasPermission();
+      const hasPermission = await NotificationService.requestPermissions();
       if (!hasPermission) {
-        console.log('No notification permission, skipping notification');
+        Logger.warn('No notification permission, skipping notification');
         return;
       }
 
@@ -101,55 +120,83 @@ export const NotificationService = {
         trigger: null, // Send immediately
       });
 
-      console.log('📬 Notification sent:', title);
+      Logger.info('📬 Notification sent:', title);
     } catch (error) {
-      console.error('Error sending notification:', error);
+      Logger.error('Error sending notification:', error);
     }
   },
 
   // Send notification for device status change
   sendDeviceNotification: async (deviceName: string, status: 'on' | 'off'): Promise<void> => {
+    if (!Notifications) return;
+
     const hasPermission = await NotificationService.hasPermission();
     if (!hasPermission) return;
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Device Status Changed',
-        body: `${deviceName} is now ${status.toUpperCase()}`,
-        data: { type: 'device_status' },
-        sound: 'default',
-      },
-      trigger: null,
-    });
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Device Status Changed',
+          body: `${deviceName} is now ${status.toUpperCase()}`,
+          data: { type: 'device_status' },
+          sound: 'default',
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      Logger.warn('Failed to send device notification', error);
+    }
   },
 
   // Cancel all notifications
   cancelAllNotifications: async (): Promise<void> => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    await Notifications.dismissAllNotificationsAsync();
+    if (!Notifications) return;
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.dismissAllNotificationsAsync();
+    } catch (error) {
+      Logger.warn('Failed to cancel notifications', error);
+    }
   },
 
   // Set up notification response listener
   setupNotificationListener: (
-    onNotificationTap: (notification: Notifications.Notification) => void
+    onNotificationTap: (notification: any) => void
   ) => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response: Notifications.NotificationResponse) => {
-        onNotificationTap(response.notification);
-      }
-    );
+    if (!Notifications) return null;
 
-    return subscription;
+    try {
+      const subscription = Notifications.addNotificationResponseReceivedListener(
+        (response: any) => {
+          onNotificationTap(response.notification);
+        }
+      );
+      return subscription;
+    } catch (error) {
+      Logger.warn('Failed to setup notification listener', error);
+      return null;
+    }
   },
 
   // Badge management
   setBadgeCount: async (count: number): Promise<void> => {
+    if (!Notifications) return;
+
     if (Platform.OS === 'ios') {
-      await Notifications.setBadgeCountAsync(count);
+      try {
+        await Notifications.setBadgeCountAsync(count);
+      } catch (error) {
+        Logger.warn('Failed to set badge count', error);
+      }
     }
   },
 
   clearBadge: async (): Promise<void> => {
-    await Notifications.setBadgeCountAsync(0);
+    if (!Notifications) return;
+    try {
+      await Notifications.setBadgeCountAsync(0);
+    } catch (error) {
+      Logger.warn('Failed to clear badge', error);
+    }
   },
 };

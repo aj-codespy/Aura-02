@@ -5,6 +5,7 @@ export const LightColors = {
     primary: '#1A1C1E',
     secondary: '#6C757D',
     light: '#FFFFFF',
+    disabled: '#ADB5BD',
   },
   primary: '#003366', // Dark Blue
   accent: '#007AFF', // Bright Blue
@@ -23,6 +24,7 @@ export const DarkColors = {
     primary: '#E0E0E0',
     secondary: '#A0A0A0',
     light: '#FFFFFF',
+    disabled: '#666666',
   },
   primary: '#90CAF9', // Light Blue
   accent: '#64B5F6',

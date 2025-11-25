@@ -1,5 +1,12 @@
 import { Amplify } from 'aws-amplify';
-import { fetchAuthSession, getCurrentUser, signIn, signOut } from 'aws-amplify/auth';
+import {
+  fetchAuthSession,
+  getCurrentUser,
+  signIn,
+  signOut,
+} from 'aws-amplify/auth';
+import { Logger } from './logger';
+
 // Use example file as fallback for CI/CD (aws-exports.js is gitignored)
 let awsConfig;
 try {
@@ -20,7 +27,7 @@ const USE_MOCK_AUTH = true;
 export const AuthService = {
   signIn: async (username: string, password: string) => {
     if (USE_MOCK_AUTH) {
-      console.log(`[MockAuth] Signing in ${username}...`);
+      Logger.info(`[MockAuth] Signing in ${username}...`);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network
 
       if (username && password) {
@@ -34,21 +41,21 @@ export const AuthService = {
       const { isSignedIn, nextStep } = await signIn({ username, password });
       return { isSignedIn, nextStep };
     } catch (error) {
-      console.error('Error signing in', error);
+      Logger.error('Error signing in', error);
       throw error;
     }
   },
 
   signOut: async () => {
     if (USE_MOCK_AUTH) {
-      console.log('[MockAuth] Signing out...');
+      Logger.info('[MockAuth] Signing out...');
       return;
     }
 
     try {
       await signOut();
     } catch (error) {
-      console.error('Error signing out', error);
+      Logger.error('Error signing out', error);
     }
   },
 
@@ -60,7 +67,7 @@ export const AuthService = {
     try {
       return await getCurrentUser();
     } catch (error) {
-      console.log('No current user');
+      Logger.info('No current user');
       return null;
     }
   },
@@ -73,7 +80,7 @@ export const AuthService = {
     try {
       return await fetchAuthSession();
     } catch (error) {
-      console.log('No session');
+      Logger.info('No session');
       return null;
     }
   },
