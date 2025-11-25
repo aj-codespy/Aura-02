@@ -53,8 +53,6 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
   }
 };
 
-
-
 export const HardwareService = {
   // 1. Server Configuration
   getServerStatus: async (ip: string): Promise<ServerStatusResponse | null> => {

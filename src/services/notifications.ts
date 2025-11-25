@@ -160,9 +160,7 @@ export const NotificationService = {
   },
 
   // Set up notification response listener
-  setupNotificationListener: (
-    onNotificationTap: (notification: any) => void
-  ) => {
+  setupNotificationListener: (onNotificationTap: (notification: any) => void) => {
     if (!Notifications) return null;
 
     try {

@@ -85,7 +85,14 @@ export const DataExportService = {
   exportDataPoints: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const data = await Repository.getAllDataPoints();
-      const headers = ['timestamp', 'node_id', 'node_name', 'voltage', 'current', 'power_consumption'];
+      const headers = [
+        'timestamp',
+        'node_id',
+        'node_name',
+        'voltage',
+        'current',
+        'power_consumption',
+      ];
       const fileName = `data_points_${timestamp}.csv`;
       return await DataExportService.exportToCSV(
         data,
@@ -105,7 +112,16 @@ export const DataExportService = {
   exportSchedules: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const schedules = await Repository.getAllSchedules();
-      const headers = ['id', 'device_id', 'title', 'action', 'time', 'days_json', 'date', 'enabled'];
+      const headers = [
+        'id',
+        'device_id',
+        'title',
+        'action',
+        'time',
+        'days_json',
+        'date',
+        'enabled',
+      ];
       const fileName = `schedules_${timestamp}.csv`;
       return await DataExportService.exportToCSV(
         schedules,
@@ -156,7 +172,15 @@ export const DataExportService = {
   exportAlerts: async (dir: string, timestamp: string): Promise<string | null> => {
     try {
       const alerts = await Repository.getAllAlerts();
-      const headers = ['id', 'device_id', 'node_name', 'level', 'message', 'created_at', 'acknowledged'];
+      const headers = [
+        'id',
+        'device_id',
+        'node_name',
+        'level',
+        'message',
+        'created_at',
+        'acknowledged',
+      ];
       const fileName = `alerts_${timestamp}.csv`;
       return await DataExportService.exportToCSV(
         alerts,

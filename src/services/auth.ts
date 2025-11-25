@@ -1,10 +1,5 @@
 import { Amplify } from 'aws-amplify';
-import {
-  fetchAuthSession,
-  getCurrentUser,
-  signIn,
-  signOut,
-} from 'aws-amplify/auth';
+import { fetchAuthSession, getCurrentUser, signIn, signOut } from 'aws-amplify/auth';
 import { Logger } from './logger';
 
 // Use example file as fallback for CI/CD (aws-exports.js is gitignored)
