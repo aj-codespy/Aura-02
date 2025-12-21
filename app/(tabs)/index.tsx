@@ -1,7 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../src/context/ThemeContext';
@@ -80,6 +88,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
+            <Image
+              source={require('@/assets/images/logo.png')}
+              style={{ width: 40, height: 40, marginBottom: 4 }}
+              resizeMode="contain"
+            />
             <Text style={[styles.greeting, { color: colors.primary }]}>Hi, Ayush</Text>
             <Text style={[styles.subGreeting, { color: colors.text.secondary }]}>Welcome back</Text>
           </View>

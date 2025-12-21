@@ -192,9 +192,9 @@ export const Repository = {
   // Export methods - Get all data with joins
   getAllDataPoints: async (): Promise<(DataPoint & { node_name: string })[]> => {
     const result = await db.getAllAsync<DataPoint & { node_name: string }>(
-      `SELECT d.*, n.name as node_name 
-             FROM data_points d 
-             LEFT JOIN nodes n ON d.node_id = n.id 
+      `SELECT d.*, n.name as node_name
+             FROM data_points d
+             LEFT JOIN nodes n ON d.node_id = n.id
              ORDER BY d.timestamp DESC`
     );
     return result;
@@ -202,9 +202,9 @@ export const Repository = {
 
   getAllSchedules: async (): Promise<(Schedule & { node_name: string })[]> => {
     const result = await db.getAllAsync<Schedule & { node_name: string }>(
-      `SELECT s.*, n.name as node_name 
-             FROM schedules s 
-             LEFT JOIN nodes n ON s.node_id = n.id 
+      `SELECT s.*, n.name as node_name
+             FROM schedules s
+             LEFT JOIN nodes n ON s.device_id = n.id
              ORDER BY s.time`
     );
     return result;
@@ -212,9 +212,9 @@ export const Repository = {
 
   getAllAlerts: async (): Promise<(Alert & { node_name: string })[]> => {
     const result = await db.getAllAsync<Alert & { node_name: string }>(
-      `SELECT a.*, n.name as node_name 
-             FROM alerts a 
-             LEFT JOIN nodes n ON a.device_id = n.id 
+      `SELECT a.*, n.name as node_name
+             FROM alerts a
+             LEFT JOIN nodes n ON a.device_id = n.id
              ORDER BY a.created_at DESC`
     );
     return result;
@@ -312,12 +312,12 @@ export const Repository = {
         avgCurrent: number;
         avgPower: number;
       }>(
-        `SELECT 
+        `SELECT
           ((timestamp - ?) / ?) as bucket,
           AVG(voltage) as avgVoltage,
           AVG(current) as avgCurrent,
           AVG(power_consumption) as avgPower
-        FROM data_points 
+        FROM data_points
         WHERE node_id = ? AND timestamp >= ? AND timestamp <= ?
         GROUP BY bucket
         ORDER BY bucket ASC`,

@@ -61,7 +61,7 @@ export const HardwareService = {
       if (!response.ok) throw new Error('Status check failed');
       return await response.json();
     } catch (_) {
-      Logger.info(`Server at ${ip} unreachable`); // Replaced console.log with Logger.info
+      // Logger.info(`Server at ${ip} unreachable`); // Reduced noise
       return null;
     }
   },

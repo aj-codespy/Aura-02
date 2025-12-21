@@ -8,8 +8,15 @@ let Notifications: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   Notifications = require('expo-notifications');
-} catch (e) {
-  Logger.warn('expo-notifications module not found', e);
+} catch (e: any) {
+  // Expo Go SDK 53+ removed remote notifications support
+  if (e?.message?.includes('expo-notifications')) {
+    Logger.warn(
+      'Remote notifications not supported in this environment (likely Expo Go). Local notifications may still work.'
+    );
+  } else {
+    Logger.warn('expo-notifications module not found', e);
+  }
 }
 
 // Configure notification behavior if module is available
