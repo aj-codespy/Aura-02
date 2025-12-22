@@ -96,9 +96,10 @@ export default function RootLayout() {
       setTimeout(() => {
         DeviceSyncService.startBackgroundSync();
       }, 2000);
-    } catch (e) {
+    } catch (e: any) {
       console.error('❌ Error: Database failed to load.', e);
-      setInitError('Failed to initialize database. Please restart the app.');
+      // Include the actual error message for debugging (especially useful in APK)
+      setInitError(`Failed to initialize database: ${e.message || JSON.stringify(e)}`);
       setupRunning.current = false; // Allow retry
     }
   };

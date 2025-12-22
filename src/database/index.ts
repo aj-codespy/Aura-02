@@ -11,18 +11,22 @@ export const initDatabase = async () => {
     return;
   }
 
+  let currentStep = 'start';
+
   try {
     console.log('Initializing database...');
 
     // TEMPORARY: Force database reset for testing
     // Remove this after first successful run
     try {
+      currentStep = 'temp_drop_alerts';
       await db.execAsync('DROP TABLE IF EXISTS alerts;');
       console.warn('⚠️ TEMPORARY: Dropped alerts table for fresh migration');
     } catch (e) {
       console.warn('Could not drop alerts table:', e);
     }
 
+    currentStep = 'pragma_wal';
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
     `);
@@ -42,6 +46,7 @@ export const initDatabase = async () => {
     `);
     */
 
+    currentStep = 'create_tables';
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY NOT NULL,
@@ -129,6 +134,7 @@ export const initDatabase = async () => {
     // Migration: Add device_id column to alerts table if it doesn't exist
     // This handles existing databases that were created before this column was added
     try {
+      currentStep = 'migration_alerts_dev_id';
       await db.execAsync(`
         ALTER TABLE alerts ADD COLUMN device_id INTEGER;
       `);
@@ -142,6 +148,7 @@ export const initDatabase = async () => {
 
     // Migration: Add local_ip_address column to servers table if missing
     try {
+      currentStep = 'migration_servers_ip';
       await db.execAsync(`
         ALTER TABLE servers ADD COLUMN local_ip_address TEXT;
       `);
@@ -154,6 +161,7 @@ export const initDatabase = async () => {
 
     // Migration: Add preferences_json column to users table if missing
     try {
+      currentStep = 'migration_users_pref';
       await db.execAsync(`
         ALTER TABLE users ADD COLUMN preferences_json TEXT;
       `);
@@ -166,6 +174,7 @@ export const initDatabase = async () => {
 
     // Migration: Add state column to nodes table if missing
     try {
+      currentStep = 'migration_nodes_state';
       await db.execAsync(`
         ALTER TABLE nodes ADD COLUMN state TEXT;
       `);
@@ -178,6 +187,7 @@ export const initDatabase = async () => {
 
     // Migration: Add voltage column to nodes table if missing
     try {
+      currentStep = 'migration_nodes_voltage';
       await db.execAsync(`
         ALTER TABLE nodes ADD COLUMN voltage REAL;
       `);
@@ -190,6 +200,7 @@ export const initDatabase = async () => {
 
     // Migration: Add current column to nodes table if missing
     try {
+      currentStep = 'migration_nodes_current';
       await db.execAsync(`
         ALTER TABLE nodes ADD COLUMN current REAL;
       `);
@@ -205,6 +216,7 @@ export const initDatabase = async () => {
       // Check if we need to migrate by seeing if 'title' column exists
       // But for now, to be safe and fix the crash, we'll just recreate it if it might be old
       // We can use a more surgical approach later if needed.
+      currentStep = 'migration_recreate_schedules';
       await db.execAsync('DROP TABLE IF EXISTS schedules');
       await db.execAsync(`
             CREATE TABLE IF NOT EXISTS schedules (
@@ -228,11 +240,12 @@ export const initDatabase = async () => {
     // Keep only last 100 energy data points and last 50 alerts
     // Delete logs older than 14 days (14 * 24 * 60 * 60 * 1000 = 1209600000 ms)
     const twoWeeksAgo = Date.now() - 1209600000;
+    currentStep = 'cleanup_old_data';
     await db.execAsync(`
       DELETE FROM energy_data WHERE id NOT IN(
             SELECT id FROM energy_data ORDER BY timestamp DESC LIMIT 100
           );
-      
+
       DELETE FROM alerts WHERE id NOT IN(
             SELECT id FROM alerts ORDER BY created_at DESC LIMIT 50
           );
@@ -242,9 +255,10 @@ export const initDatabase = async () => {
 
     isInitialized = true;
     console.log('Database initialized successfully');
-  } catch (error) {
-    console.error('Error initializing database:', error);
-    throw error;
+  } catch (error: any) {
+    console.error(`Error initializing database at step "${currentStep}":`, error);
+    // Throw with more context to help debugging on APK
+    throw new Error(`DB Init Failed at step "${currentStep}": ${error.message}`);
   }
 };
 
