@@ -242,8 +242,8 @@ export const initDatabase = async () => {
     const twoWeeksAgo = Date.now() - 1209600000;
     currentStep = 'cleanup_old_data';
     await db.execAsync(`
-      DELETE FROM energy_data WHERE id NOT IN(
-            SELECT id FROM energy_data ORDER BY timestamp DESC LIMIT 100
+      DELETE FROM data_points WHERE id NOT IN(
+            SELECT id FROM data_points ORDER BY timestamp DESC LIMIT 100
           );
 
       DELETE FROM alerts WHERE id NOT IN(
